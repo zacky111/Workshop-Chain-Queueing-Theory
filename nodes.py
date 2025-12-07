@@ -12,7 +12,8 @@ class FIFONode:
         self.queue: Deque = collections.deque()
         self.busy = False
         self.busy_count = 0   # 0 or 1
-        # Statystyka czasowa
+
+        # Time-weighted statistics
         self.last_change_time = 0.0
         self.area_queue = 0.0
         self.area_busy = 0.0
@@ -29,12 +30,13 @@ class FIFONode:
             self._update_areas(sim_time)
             return schedule_start(sim_time, customer, self.service_time())
         else:
+            # join the queue
             self.queue.append(customer)
             self.queue_length = len(self.queue)
             return None
 
     def service_time(self):
-        # exponential
+        # generating exponential
         if self.rate <= 0:
             return float('inf')
         return random.expovariate(self.rate)
