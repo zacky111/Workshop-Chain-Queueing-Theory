@@ -1,6 +1,5 @@
 # params.py
 # Parametry sieci i klasy klientów.
-# Bazowane na: "Propozycja tematu - sieci kolejkowe.docx". :contentReference[oaicite:1]{index=1}
 
 # Liczba klientów (zamknięta populacja) przypisana do każdej klasy:
 POPULATION = {
@@ -24,7 +23,18 @@ NODE_TYPES = {
     8: 3   # Stała eksploatacja (IS)
 }
 
-# Domyślne średnie szybkości obsługi (lambda = 1/mean_service_time).
+NODE_NAMES = {
+    1: "Przyjmowanie zgłoszenia",
+    2: "Dział elektryczny",
+    3: "Dział mechaniczny",
+    4: "Testy elektryczne - automatyczne",
+    5: "Testy mechaniczne - automatyczne",
+    6: "Wycena/dokumentacja",
+    7: "Obsługa klienta - wydanie urządzenia",
+    8: "Stała eksploatacja"
+}
+
+# Domyślne średnie szybkości obsługi (lambda = 1/mean_service_time). --> lambda
 # Dla rozkładu wykładniczego: time ~ Exp(rate)
 SERVICE_RATES = {
     1: 1/3.0,   # node 1: średnio 3.0 czasu na obsługę
@@ -37,22 +47,49 @@ SERVICE_RATES = {
     8: 1/10.0   # node 8: stała eksploatacja średnio 10.0
 }
 
-# Prawdopodobieństwo skoku z 6 -> 8 (bez przejścia przez 7).
-# Pozostała część (1 - P_6_to_8) idzie 6 -> 7 -> 8 (jeśli dana klasa w ogóle używa 7).
-P_6_TO_8 = 0.3
 
 # Trasy klas (lista węzłów do odwiedzenia; po dojściu do ostatniego węzła wraca do 1).
-# UWAGA: trasy opisane sekwencyjnie. Gdy węzeł 6 występuje, routing może rozgałęziać się
-# zgodnie z P_6_TO_8 — to obsługujemy w kodzie symulacji.
+# ROUTING[class][node] = [(next_node, probability), ...]
 ROUTES = {
-    1: [1, 2, 4, 6, 7, 8],                # klasa 1 — elektryczne
-    2: [1, 3, 5, 6, 7, 8],                # klasa 2 — mechaniczne
-    3: [1, 2, 3, 4, 5, 6, 7, 8],          # klasa 3 — mieszane
-    4: [1, 6, 7, 8]                       # klasa 4 — uproszczone
+    1: {   # klasa 1 — elektryczne
+        1: [(2, 1.0)],                 # 1 → 2
+        2: [(4, 0.7), (6, 0.3)],       # 2 → 4
+        4: [(6, 1.0)],                 # 4 → 6
+        6: [(7, 0.7), (8, 0.3)],       # rozgałęzienie 6 → 7 lub 6 → 8
+        7: [(8, 1.0)],                 # 7 → 8
+        8: [(1, 1.0)],                 # cykl zamknięty
+    },
+
+    2: {   # klasa 2 — mechaniczne
+        1: [(3, 1.0)],
+        3: [(5, 0.7), (6, 0.3)],
+        5: [(6, 1.0)],
+        6: [(7, 0.7), (8, 0.3)],
+        7: [(8, 1.0)],
+        8: [(1, 1.0)],
+    },
+
+    3: {   # klasa 3 — mieszane
+        1: [(2, 1.0)],
+        2: [(3, 1.0)],
+        3: [(4, 1.0)],
+        4: [(5, 1.0)],
+        5: [(6, 1.0)],
+        6: [(7, 0.7), (8, 0.3)],
+        7: [(8, 1.0)],
+        8: [(1, 1.0)],
+    },
+
+    4: {   # klasa 4 — uproszczone
+        1: [(6, 1.0)],
+        6: [(7, 0.7), (8, 0.3)],  # uproszczone: brak 6→8
+        7: [(8, 1.0)],
+        8: [(1, 1.0)],
+    },
 }
 
-# Czas symulacji (jednostki czasu)
-SIM_TIME = 20000.0
+# Czas symulacji [min]
+SIM_TIME = 20000.0 
 
 # Ziarno generatora losowego (dla powtarzalności)
 SEED = 42
