@@ -45,10 +45,10 @@ def f_ir(lambda_ir, mu_ir, node_type, K = P.K):
 
     rho_i = 1
 
-    # Jeśli mu_i == 0: zwracamy bardzo duże wartości (przeciążenie)
+    # Jeśli mu_i == 0: zwracamy bardzo duże wartości (przeciążenie) <-- moze powodowac bledy
     if mu_ir <= 0:
             return MAX_F
-
+    
     if node_type == 3:
         # infinite-server (IS), brak kolejek
         return rho_ir  # K_ir_mean = lambda_ir / mu_ir
@@ -56,7 +56,7 @@ def f_ir(lambda_ir, mu_ir, node_type, K = P.K):
     if node_type == 1:
         # single-server FIFO
         # jeśli rho >= 1 → system przeciążony; zamiast inf zwracamy dużą liczbę
-        if rho_ir >= 0.999999:
+        if rho_ir >= 0.999999: # <-- moze powodowac bledy
             return MAX_F
         
         return rho_ir / (1.0 - (((K-1)/K) * rho_i)) 
@@ -133,7 +133,7 @@ def sum_method(max_iter=10000, eps=1e-6, verbose=False, R=len(P.POPULATION), I =
     K_ir = {r: {} for r in range(1, R + 1)}
     for r in range(1, R + 1):
         lam_r = max(lambdas[r], MIN_LAMBDA)
-        for i in range(1, N + 1):
+        for i in range(1, I + 1):
             mu_i = P.SERVICE_RATES.get(i, 1.0)
             node_type = P.NODE_TYPES.get(i, 1)
             K_ir[r][i] = f_ir(lam_r, mu_i, node_type)

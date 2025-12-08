@@ -9,8 +9,11 @@ def main():
     lambdas, K_ir, err = sum_method()
 
     print("Przepustowości klas (λ_r):")
-    for r in sorted(lambdas):
+    for r in lambdas:
         print(f"  Klasa {r}: λ_r = {lambdas[r]:.5f}")
+
+    """print("Przepustowość całkowita λ = " +
+          f"{sum(lambdas[r] for r in lambdas):.5f}")"""
 
     print("\nŚrednia liczba klientów klasy r w węźle i (K_ir):")
     for r in K_ir:
