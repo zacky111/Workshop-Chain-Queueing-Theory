@@ -9,6 +9,10 @@ POPULATION = {
     4: 2    # klasa 4 — uproszczone zlecenia
 }
 
+# Całkowita liczba klientów w systemie
+K = sum(POPULATION.values())
+
+
 # Węzły (numery 1..8) i ich typy:
 # typ 1 -> FIFO single-server (kolejka, 1 serwer)
 # typ 3 -> IS infinite-server (brak kolejek, każdy od razu zaczyna obsługę)
@@ -34,7 +38,8 @@ NODE_NAMES = {
     8: "Stała eksploatacja"
 }
 
-# Domyślne średnie szybkości obsługi (lambda = 1/mean_service_time). --> lambda
+# mi
+# Domyślne średnie szybkości obsługi (mi = 1/mean_service_time).
 # Dla rozkładu wykładniczego: time ~ Exp(rate)
 SERVICE_RATES = {
     1: 1/3.0,   # node 1: średnio 3.0 czasu na obsługę

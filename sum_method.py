@@ -10,49 +10,74 @@ RELAX_ALPHA = 0.4   # współczynnik relaksacji (0 < alpha <= 1)
 #oznaczenia
 """
 lamba --> przepustowosc
-K_ir --> srednia liczba klientow klasy r w wezel i
+mu --> współczynnik czasu obsługi
+
+rho --> współczynnik obciążenia wykorzystania:  rho = lambda / mu
 rho_i --> stopień obciążenia węzła i (war. obciążenia: >1)
 
+K_ir_mean --> srednia liczba klientow klasy r w wezle i
+
+K --> ogólna ilość klientów w systemie
+K_r --> ilość klientów klasy r w systemie
 
 """
 
-def f_ir(lambda_r, mu_i, node_type):
+def f_ir(lambda_ir, mu_ir, node_type, K = P.K):
     """
     Funkcja f_ir(λ_ir) dla typu węzła:
       - typ 1: FIFO 1-serwer → K = ρ / (1 - ρ) przy ρ = λ/μ
       - typ 3: IS (infinite server) → K = λ / μ
     Zwracamy skończoną wartość; przy przeciążeniu zwracamy MAX_F.
+    
+    Dane wejściowe:
+        - lambda_r: przepustowość klasy r (λ_r)
+        - mu_i: szybkość obsługi węzła i (μ_i)
+        - node_type: typ węzła i (1 lub 3)
+
+    Dane wyjściowe:
+        - f_ir: średnia liczba zgłoszeń klasy r w węźle i (K_ir) <-- wart. średnia
     """
     # ochronne obcięcie
-    if lambda_r <= 0:
+    if lambda_ir <= 0:
         return 0.0
 
-    if node_type == 3:
-        # infinite-server: liniowo zależne od λ
-        # Jeśli mu_i == 0: zwracamy bardzo duże
-        if mu_i <= 0:
+    rho_ir = lambda_ir / mu_ir
+
+    rho_i = 1
+
+    # Jeśli mu_i == 0: zwracamy bardzo duże wartości (przeciążenie)
+    if mu_ir <= 0:
             return MAX_F
-        return lambda_r / mu_i
+
+    if node_type == 3:
+        # infinite-server (IS), brak kolejek
+        return rho_ir  # K_ir_mean = lambda_ir / mu_ir
 
     if node_type == 1:
         # single-server FIFO
-        if mu_i <= 0:
-            return MAX_F
-        rho = lambda_r / mu_i
         # jeśli rho >= 1 → system przeciążony; zamiast inf zwracamy dużą liczbę
-        if rho >= 0.999999:
+        if rho_ir >= 0.999999:
             return MAX_F
-        # standardowa formuła K = rho / (1 - rho)
-        return rho / (1.0 - rho)
+        
+        return rho_ir / (1.0 - (((K-1)/K) * rho_i)) 
 
     # Nieobsługiwany typ -> ostrzeżenie przez wyjątek
     raise ValueError("Nieznany typ węzła w f_ir(): %r" % (node_type,))
 
 
-def sum_method(max_iter=10000, eps=1e-6, verbose=False, R=len(P.POPULATION), N = len(P.NODE_TYPES)):
+def sum_method(max_iter=10000, eps=1e-6, verbose=False, R=len(P.POPULATION), I = len(P.NODE_TYPES)):
     """
     Metoda SUM dla sieci wieloklasowej z relaksacją.
-    Zwraca (lambdas, K_ir, err) gdzie:
+    Dane wejściowe:
+    - max_iter - maksymalna liczba iteracji
+    - eps - kryterium zbieżności (błąd)
+    - verbose - czy wypisywać postęp co 100 iteracji
+    - R - liczba klas klientów
+        - r - konkretna klasa (1..R)
+    - I - liczba węzłów sieci
+        - i - konkretny węzeł (1..I)
+
+   Dane wyjściowe:
       - lambdas: dict {r: lambda_r}
       - K_ir: dict {r: {i: K_ir}}
       - err: końcowy błąd (sum of squared diffs)
@@ -69,7 +94,7 @@ def sum_method(max_iter=10000, eps=1e-6, verbose=False, R=len(P.POPULATION), N =
         for r in range(1, R + 1):
             S = 0.0
             lam_r = max(lambdas[r], MIN_LAMBDA)
-            for i in range(1, N + 1):
+            for i in range(1, I + 1):
                 mu_i = P.SERVICE_RATES.get(i, 1.0)
                 node_type = P.NODE_TYPES.get(i, 1)
                 S += f_ir(lam_r, mu_i, node_type)
