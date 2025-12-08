@@ -7,6 +7,14 @@ MIN_S = 1e-12       # zabezpieczenie przed dzieleniem przez zero
 MIN_LAMBDA = 1e-12  # minimalna dopuszczalna wartość lambda
 RELAX_ALPHA = 0.4   # współczynnik relaksacji (0 < alpha <= 1)
 
+#oznaczenia
+"""
+lamba --> przepustowosc
+K_ir --> srednia liczba klientow klasy r w wezel i
+rho_i --> stopień obciążenia węzła i (war. obciążenia: >1)
+
+
+"""
 
 def f_ir(lambda_r, mu_i, node_type):
     """
@@ -41,7 +49,7 @@ def f_ir(lambda_r, mu_i, node_type):
     raise ValueError("Nieznany typ węzła w f_ir(): %r" % (node_type,))
 
 
-def sum_method(max_iter=10000, eps=1e-6, verbose=False):
+def sum_method(max_iter=10000, eps=1e-6, verbose=False, R=len(P.POPULATION), N = len(P.NODE_TYPES)):
     """
     Metoda SUM dla sieci wieloklasowej z relaksacją.
     Zwraca (lambdas, K_ir, err) gdzie:
@@ -49,9 +57,7 @@ def sum_method(max_iter=10000, eps=1e-6, verbose=False):
       - K_ir: dict {r: {i: K_ir}}
       - err: końcowy błąd (sum of squared diffs)
     """
-
-    R = len(P.POPULATION)
-    N = len(P.NODE_TYPES)
+    
 
     # inicjalizacja lambda: mała dodatnia wartość
     lambdas = {r: 1e-4 for r in range(1, R + 1)}
