@@ -27,6 +27,18 @@ NODE_TYPES = {
     8: 3   # Stała eksploatacja (IS)
 }
 
+# Liczba serwerów w węźle (używane tylko dla typów IS, gdzie jest więcej niż 1 serwer)
+NODE_M_SERVERS = {
+    1: 1,  # Przyjmowanie zgłoszenia
+    2: 1,  # Dział elektryczny
+    3: 1,  # Dział mechaniczny
+    4: 3,  # Testy elektryczne - automatyczne
+    5: 3,  # Testy mechaniczne - automatyczne
+    6: 1,  # Wycena/dokumentacja
+    7: 2,  # Obsługa klienta - wydanie urządzenia
+    8: 10  # Stała eksploatacja
+}
+
 NODE_NAMES = {
     1: "Przyjmowanie zgłoszenia",
     2: "Dział elektryczny",
