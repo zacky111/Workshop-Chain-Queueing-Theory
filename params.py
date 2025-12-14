@@ -28,6 +28,7 @@ NODE_TYPES = {
 }
 
 # Liczba serwerów w węźle (używane tylko dla typów IS, gdzie jest więcej niż 1 serwer)
+# odpowiada za parametr m w rozkładzie M/M/m
 NODE_M_SERVERS = {
     1: 1,  # Przyjmowanie zgłoszenia
     2: 1,  # Dział elektryczny
