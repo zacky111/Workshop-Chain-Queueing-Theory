@@ -2,10 +2,15 @@ from sim_engine import Simulator
 import params as P
 import pprint
 from sum_method import sum_method
+from utils import compute_e_ir
 
 
 def main():
     print("\n=== METODA SUM ===")
+
+    # to be used in sum_method
+    e_ir=compute_e_ir(P.ROUTES, len(P.NODE_TYPES), list(P.POPULATION.keys()))
+
     lambdas, K_ir, err = sum_method()
 
     print("Przepustowości klas (λ_r):")
