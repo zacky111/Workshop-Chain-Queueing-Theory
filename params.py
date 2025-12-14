@@ -111,10 +111,9 @@ SIM_TIME = 20000.0
 SEED = 42
 
 
+## e_ir computation
 import numpy as np
 import pandas as pd
-
-
 
 def compute_e_ir(ROUTES, I, classes):
     """
@@ -152,3 +151,10 @@ def compute_e_ir(ROUTES, I, classes):
 e_ir=compute_e_ir(ROUTES, len(NODE_TYPES), list(POPULATION.keys()))
 df = pd.DataFrame(e_ir).T
 print(df.round(3))
+
+
+## metoda sum parametry
+# MAX_F = 1e12        # zastępuje "inf" dla f_ir przy przeciążeniu
+MIN_S = 1e-12       # zabezpieczenie przed dzieleniem przez zero
+MIN_LAMBDA = 1e-12  # minimalna dopuszczalna wartość lambda
+RELAX_ALPHA = 0.4   # współczynnik relaksacji (0 < alpha <= 1)

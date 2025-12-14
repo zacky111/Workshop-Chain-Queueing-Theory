@@ -2,10 +2,7 @@ import math
 import params as P
 
 # ustawienia numeryczne stabilizujące
-MAX_F = 1e12        # zastępuje "inf" dla f_ir przy przeciążeniu
-MIN_S = 1e-12       # zabezpieczenie przed dzieleniem przez zero
-MIN_LAMBDA = 1e-12  # minimalna dopuszczalna wartość lambda
-RELAX_ALPHA = 0.4   # współczynnik relaksacji (0 < alpha <= 1)
+
 
 #oznaczenia
 """
@@ -47,7 +44,7 @@ def f_ir(lambda_ir, mu_ir, node_type, K = P.K):
 
     # Jeśli mu_i == 0: zwracamy bardzo duże wartości (przeciążenie) <-- moze powodowac bledy
     if mu_ir <= 0:
-            return MAX_F
+            return P.MAX_F
     
     if node_type == 3:
         # infinite-server (IS), brak kolejek
@@ -57,7 +54,7 @@ def f_ir(lambda_ir, mu_ir, node_type, K = P.K):
         # single-server FIFO
         # jeśli rho >= 1 → system przeciążony; zamiast inf zwracamy dużą liczbę
         if rho_ir >= 0.999999: # <-- moze powodowac bledy
-            return MAX_F
+            return P.MAX_F
         
         return rho_ir / (1.0 - (((K-1)/K) * rho_i)) 
 
@@ -93,7 +90,7 @@ def sum_method(max_iter=10000, eps=1e-6, verbose=False, R=len(P.POPULATION), I =
         # oblicz kandydatów new_lambda bez relaksacji
         for r in range(1, R + 1):
             S = 0.0
-            lam_r = max(lambdas[r], MIN_LAMBDA)
+            lam_r = max(lambdas[r], P.MIN_LAMBDA)
             for i in range(1, I + 1):
                 mu_i = P.SERVICE_RATES.get(i, 1.0)
                 node_type = P.NODE_TYPES.get(i, 1)
@@ -101,7 +98,7 @@ def sum_method(max_iter=10000, eps=1e-6, verbose=False, R=len(P.POPULATION), I =
 
             # zabezpieczenie przed zerem
             if S <= 0:
-                S = MIN_S
+                S = P.MIN_S
 
             candidate[r] = P.POPULATION[r] / S
 
@@ -111,11 +108,17 @@ def sum_method(max_iter=10000, eps=1e-6, verbose=False, R=len(P.POPULATION), I =
             new_val = candidate[r]
             # ogranicz nową wartość do nieujemnej i minimalnej
             if new_val <= 0:
-                new_val = MIN_LAMBDA
+                new_val = P.MIN_LAMBDA
             # relaksacja
-            lambdas[r] = (1.0 - RELAX_ALPHA) * lambdas[r] + RELAX_ALPHA * new_val
+            lambdas[r] = (1.0 - P.RELAX_ALPHA) * lambdas[r] + P.RELAX_ALPHA * new_val
             # błąd (zmiana kwadratowa)
-            diff = lambdas[r] - ((1.0 - RELAX_ALPHA) * lambdas[r] + RELAX_ALPHA * new_val)  # równanie daje 0, więc lepiej liczmy bez relaksacji
+            diff = lambdas[r] - ((1.0 - P.RELAX_ALPHA) * lambdas[r] + P.RELAX_ALPHA * new_val)  # równanie daje 0, więc lepiej liczmy bez relaksacji
+            if new_val <= 0:
+                new_val = P.MIN_LAMBDA
+            # relaksacja
+            lambdas[r] = (1.0 - P.RELAX_ALPHA) * lambdas[r] + P.RELAX_ALPHA * new_val
+            # błąd (zmiana kwadratowa)
+            diff = lambdas[r] - ((1.0 - P.RELAX_ALPHA) * lambdas[r] + P.RELAX_ALPHA * new_val)  # równanie daje 0, więc lepiej liczmy bez relaksacji
             # poprawione: liczymy różnicę względem "candidate" (surowy postulat)
             diff = lambdas[r] - new_val
             err += diff * diff
@@ -132,7 +135,7 @@ def sum_method(max_iter=10000, eps=1e-6, verbose=False, R=len(P.POPULATION), I =
     # oblicz K_ir na podstawie finalnych lambdas
     K_ir = {r: {} for r in range(1, R + 1)}
     for r in range(1, R + 1):
-        lam_r = max(lambdas[r], MIN_LAMBDA)
+        lam_r = max(lambdas[r], P.MIN_LAMBDA)
         for i in range(1, I + 1):
             mu_i = P.SERVICE_RATES.get(i, 1.0)
             node_type = P.NODE_TYPES.get(i, 1)
