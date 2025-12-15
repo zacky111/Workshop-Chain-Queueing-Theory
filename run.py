@@ -1,7 +1,7 @@
 from sim_engine import Simulator
-import params as P
+import src.params as P
 import pprint
-from sum_method import sum_method
+from old.sum_method_old import sum_method
 
 
 def main():

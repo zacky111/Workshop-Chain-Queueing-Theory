@@ -1,8 +1,8 @@
 from sim_engine import Simulator
-import params as P
+import src.params as P
 import pprint
 from sum_method import sum_method
-from utils import compute_e_ir
+from src.utils import compute_e_ir
 
 
 def main():

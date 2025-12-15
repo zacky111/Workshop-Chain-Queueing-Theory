@@ -1,5 +1,5 @@
 import math
-import params as P
+import src.params as P
 
 # ustawienia numeryczne stabilizujące
 
