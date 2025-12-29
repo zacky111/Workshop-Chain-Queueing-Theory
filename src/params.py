@@ -1,16 +1,17 @@
 # params.py
 # Parametry sieci i klasy klientów.
 
-from utils import compute_visit_ratios
+from src.utils import compute_visit_ratios
 
 # Liczba klientów (zamknięta populacja) przypisana do każdej klasy:
+# K_r = POPULATION[R] # liczba klientów klasy r
 POPULATION = {
     1: 5,   # klasa 1 — uszkodzenia elektryczne
     2: 4,   # klasa 2 — uszkodzenia mechaniczne
     3: 3,   # klasa 3 — mieszane
     4: 2    # klasa 4 — uproszczone zlecenia
 }
-#K_r = POPULATION[R] # liczba klientów klasy r
+
 
 
 # Całkowita liczba klientów w systemie
@@ -154,3 +155,6 @@ MAX_F = 1e12        # zastępuje "inf" dla f_ir przy przeciążeniu
 MIN_S = 1e-12       # zabezpieczenie przed dzieleniem przez zero
 MIN_LAMBDA = 1e-12  # minimalna dopuszczalna wartość lambda
 RELAX_ALPHA = 0.4   # współczynnik relaksacji (0 < alpha <= 1)
+
+MAX_ITER = 1000    # maksymalna liczba iteracji
+EPS = 1e-6         # tolerancja zbieżności

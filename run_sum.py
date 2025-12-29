@@ -8,10 +8,7 @@ from src.utils import compute_e_ir
 def main():
     print("\n=== METODA SUM ===")
 
-    # to be used in sum_method
-    e_ir=compute_e_ir(P.ROUTES, len(P.NODE_TYPES), list(P.POPULATION.keys()))
-
-    lambdas, K_ir, err = sum_method()
+    lambdas, K_ir, err, err_mean = sum_method()
 
     print("Przepustowości klas (λ_r):")
     for r in lambdas:
@@ -26,7 +23,9 @@ def main():
         for i in K_ir[r]:
             print(f"  Węzeł {i}: {K_ir[r][i]:.5f}")
 
-    print(f"\nBłąd iteracji: {err}")
+    print(f"\nBłąd ostatniej iteracji: {err}")
+    print(f"Średni błąd z wszystkich iteracji: {err_mean}")
+
 
 if __name__ == "__main__":
     main()
