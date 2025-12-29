@@ -40,3 +40,20 @@ df = pd.DataFrame(e_ir).T
 df = df.map(lambda x: 0 if abs(x) < 1e-10 else x)
 print(df.round(3))
 """
+
+def compute_visit_ratios(routes, num_nodes, entry_node=1):
+    """
+    Liczy e_ir dla jednej klasy.
+    """
+    P = np.zeros((num_nodes, num_nodes))
+
+    for i, transitions in routes.items():
+        for j, p in transitions:
+            P[i-1, j-1] += p
+
+    A = np.eye(num_nodes) - P.T
+    b = np.zeros(num_nodes)
+    b[entry_node - 1] = 1.0
+
+    e = np.linalg.solve(A, b)
+    return {i+1: e[i] for i in range(num_nodes)}

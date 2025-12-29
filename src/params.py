@@ -1,6 +1,8 @@
 # params.py
 # Parametry sieci i klasy klientów.
 
+from utils import compute_visit_ratios
+
 # Liczba klientów (zamknięta populacja) przypisana do każdej klasy:
 POPULATION = {
     1: 5,   # klasa 1 — uszkodzenia elektryczne
@@ -8,6 +10,8 @@ POPULATION = {
     3: 3,   # klasa 3 — mieszane
     4: 2    # klasa 4 — uproszczone zlecenia
 }
+#K_r = POPULATION[R] # liczba klientów klasy r
+
 
 # Całkowita liczba klientów w systemie
 K = sum(POPULATION.values())
@@ -51,7 +55,8 @@ NODE_NAMES = {
     8: "Stała eksploatacja"
 }
 
-# mu - szybkości obsługi węzłów (1 / średni czas obsługi [min])
+# mu_i - szybkości obsługi węzłów (1 / średni czas obsługi [min])
+# przez to że czasy obługi nie są zależne od klasy, to mu_i == mu_ir
 # Dla rozkładu wykładniczego: time ~ Exp(rate)
 SERVICE_RATES = {
     1: 1/3.0,   # node 1: średnio 3.0 czasu na obsługę
@@ -102,6 +107,15 @@ ROUTES = {
         7: [(8, 1.0)],
         8: [(1, 1.0)],
     },
+}
+
+NUM_NODES = len(NODE_TYPES)
+
+# Współczynniki liczby wizyt e_ir dla każdej klasy r i węzła i
+# VISIT_RATIOS[r][i] == e_ir
+VISIT_RATIOS = {
+    r: compute_visit_ratios(ROUTES[r], NUM_NODES)
+    for r in ROUTES
 }
 
 # Czas symulacji [min]
