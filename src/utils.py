@@ -41,19 +41,37 @@ df = df.map(lambda x: 0 if abs(x) < 1e-10 else x)
 print(df.round(3))
 """
 
-def compute_visit_ratios(routes, num_nodes, entry_node=1):
+
+def compute_visit_ratios(routes, num_nodes, entry_node=1, tol=1e-12, max_iter=10000):
     """
-    Liczy e_ir dla jednej klasy.
+    Liczy e_ir dla jednej klasy w sieci ZAMKNIĘTEJ
+    jako wektor własny macierzy przejść (power method).
     """
-    P = np.zeros((num_nodes, num_nodes))
 
-    for i, transitions in routes.items():
-        for j, p in transitions:
-            P[i-1, j-1] += p
+    # e^(0)
+    e = {i: 1.0 for i in range(1, num_nodes + 1)}
 
-    A = np.eye(num_nodes) - P.T
-    b = np.zeros(num_nodes)
-    b[entry_node - 1] = 1.0
+    for _ in range(max_iter):
+        new_e = {i: 0.0 for i in range(1, num_nodes + 1)}
 
-    e = np.linalg.solve(A, b)
-    return {i+1: e[i] for i in range(num_nodes)}
+        # e^{k+1} = e^k P
+        for i, transitions in routes.items():
+            for j, p in transitions:
+                new_e[j] += e[i] * p
+
+        # normalizacja: e_entry = 1
+        factor = new_e[entry_node]
+        if factor == 0:
+            raise RuntimeError("entry node unreachable")
+
+        for i in new_e:
+            new_e[i] /= factor
+
+        # test zbieżności
+        diff = max(abs(new_e[i] - e[i]) for i in e)
+        e = new_e
+
+        if diff < tol:
+            return e
+
+    raise RuntimeError("compute_visit_ratios: brak zbieżności")

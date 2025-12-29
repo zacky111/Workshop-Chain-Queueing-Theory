@@ -118,6 +118,31 @@ VISIT_RATIOS = {
     for r in ROUTES
 }
 
+for r, visits in VISIT_RATIOS.items():
+    assert abs(visits[1] - 1.0) < 1e-8, f"e_1{r} != 1"
+
+for r, visits in VISIT_RATIOS.items():
+    for i, e_ir in visits.items():
+        assert e_ir >= 0, "ujemne visit ratio"
+
+# Print obliczonych e_ir
+"""
+print("Współczynniki liczby wizyt e_ir:")
+for r in VISIT_RATIOS:
+    print(f"Klasa {r}:")
+    for i in VISIT_RATIOS[r]:
+        print(f"  Węzeł {i}: e_ir = {VISIT_RATIOS[r][i]:.5f}")
+"""
+
+# Obliczenie z warunku początkowego maksymalnych przepustowości klas
+MAX_LAMBDA = {}
+for r, visits in VISIT_RATIOS.items():
+    limits = []
+    for i, e_ir in visits.items():
+        if e_ir > 0:
+            limits.append(SERVICE_RATES[i] * NODE_M_SERVERS[i] / e_ir)
+    MAX_LAMBDA[r] = min(limits)
+
 # Czas symulacji [min]
 SIM_TIME = 20000.0 
 
