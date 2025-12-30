@@ -30,55 +30,41 @@ def f_ir(lambdas: Dict[int, float], e_ir: Dict[int, Dict[int, float]]):
 
     # przygotuj e_ir - jeśli nie podano, oblicz z ROUTES
     if e_ir is None:
-        e_ir = compute_e_ir(params.ROUTES, I, classes)
+        # oblicz współczynniki odwiedzin e_ir (format: e_ir[i][r])
+        e_ir = compute_e_ir(params.ROUTES, I, list(params.POPULATION.keys()))
 
     # obliczamy dla każdego węzła całościowy napływ Lambda_i
+    Lambda = {i: 0.0 for i in range(1, I + 1)}
     for i in range(1, I + 1):
-        mu = params.SERVICE_RATES.get(i, None)
-        node_type = params.NODE_TYPES.get(i, 1)
-
-        # składnik napływu klasy r do węzła i: lambda_r * e_ir(i,r)
-        arrivals = {}
-        Lambda_i = 0.0
         for r in classes:
-            lam_r = max(lambdas.get(r, 0.0), params.MIN_LAMBDA)
-            e = e_ir.get(i, {}).get(r, 0.0)
-            arrivals[r] = lam_r * e
-            Lambda_i += arrivals[r]
+            visit = e_ir.get(i, {}).get(r, 0.0)
+            lam_r = max(lambdas.get(r, 0.0), params.MIN_S)
+            Lambda[i] += lam_r * visit
 
-        # jeśli praktycznie brak napływu -> wszystkie f_ir = 0
-        if Lambda_i < params.MIN_S:
-            for r in classes:
-                f[i][r] = 0.0
-            continue
-
-        # obsługa węzła wg typu
-        if node_type == 3:
-            # IS / M/M/∞ (średnia liczba = arrival_rate * mean_service_time)
-            # mean service time = 1 / mu
-            if mu is None or mu <= 0:
-                # brak poprawnego mu -> traktujemy jako bardzo duże obciążenie
-                for r in classes:
-                    f[i][r] = params.MAX_F * (arrivals[r] / Lambda_i if Lambda_i > 0 else 0.0)
-            else:
-                for r in classes:
-                    f[i][r] = arrivals[r] / mu  # oczekiwana liczba klas r w i
-        else:
-            # typ 1 (FIFO single-server) -> M/M/1 aproksymacja
-            if mu is None or mu <= 0:
-                for r in classes:
-                    f[i][r] = params.MAX_F * (arrivals[r] / Lambda_i if Lambda_i > 0 else 0.0)
-            else:
-                rho = Lambda_i / mu
-                if rho >= 1.0:
-                    # przeciążenie -> przybliżamy bardzo dużą liczbą
-                    for r in classes:
-                        f[i][r] = params.MAX_F * (arrivals[r] / Lambda_i)
+    # teraz liczymy f[i][r] według typu węzła
+    for i in range(1, I + 1):
+        mu_i = params.SERVICE_RATES.get(i, None)
+        node_type = params.NODE_TYPES[i]
+        for r in classes:
+            visit = e_ir.get(i, {}).get(r, 0.0)
+            lam_ir = max(lambdas.get(r, 0.0) * visit, params.MIN_S)
+            if node_type == 3:  # IS
+                if mu_i is None or mu_i <= 0:
+                    f[i][r] = params.MAX_F * (lam_ir / max(Lambda[i], params.MIN_S))
                 else:
-                    L_i = rho / (1.0 - rho)  # średnia liczba w M/M/1
-                    for r in classes:
-                        share = arrivals[r] / Lambda_i if Lambda_i > 0 else 0.0
-                        f[i][r] = share * L_i
+                    f[i][r] = lam_ir / mu_i
+            elif node_type in [1, 2, 4]:  # FIFO ~ M/M/1
+                if mu_i is None or mu_i <= 0:
+                    f[i][r] = params.MAX_F * (lam_ir / max(Lambda[i], params.MIN_S))
+                else:
+                    rho = Lambda[i] / mu_i
+                    if rho >= 1.0:
+                        f[i][r] = params.MAX_F * (lam_ir / max(Lambda[i], params.MIN_S))
+                    else:
+                        L_i = rho / (1.0 - rho)
+                        f[i][r] = (lam_ir / max(Lambda[i], params.MIN_S)) * L_i
+            else:
+                raise ValueError(f"Nieobsługiwany typ węzła: {node_type}")
 
     return f
 
@@ -115,6 +101,8 @@ def fix_ir(i,
             rho_i = 0.0
             for _ in range(r):
                 rho_i += visit_ratios[r][i] / max(mu_i, MIN_S)
+            
+            print(f"rho_i: {rho_i}")
             return (rho_ir) * (1/ max(((1 - ((K-1) / K)) * rho_i, MIN_S)))
         
         else:
@@ -163,8 +151,8 @@ def sum_method():
 
 # === GŁÓWNY ALGORYTM METODY SUM ===
 # inicjalizacja
-f_ir = {
-    (i, r): 1.0
+f_ir_val = {
+    (i, r): 0.00001
     for i in params.NODE_TYPES
     for r in params.POPULATION
 }
@@ -176,7 +164,7 @@ for iteration in range(params.MAX_ITER):
     denom = {}
     for r in params.POPULATION:
         denom[r] = sum(
-            params.VISIT_RATIOS[r][i] * f_ir[(i, r)]
+            params.VISIT_RATIOS[r][i] * f_ir_val[(i, r)]
             for i in params.NODE_TYPES
         )
 
@@ -190,6 +178,7 @@ for iteration in range(params.MAX_ITER):
             lambda_ir[(i, r)] = val
             lambda_i_all[i] += val
 
+
     # --- krok 3: FIX ---
     new_f_ir = {}
     for r in params.POPULATION:
@@ -202,16 +191,18 @@ for iteration in range(params.MAX_ITER):
             )
 
     # --- krok 4: sprawdzamy zbieżność ---
-    diff = max(abs(new_f_ir[k] - f_ir[k]) for k in f_ir)
+    diff = math.sqrt(sum((new_f_ir[k] - f_ir_val[k])**2 for k in f_ir_val))
+    print(f"Iteracja {iteration + 1}: błąd = {diff}")
     errs.append(diff)  # zapisujemy err tej iteracji
-    f_ir = new_f_ir
+    f_ir_val = new_f_ir
 
     if diff < params.EPS:
+        print("ended on iteration", iteration + 1)
         break
 
 # przygotowujemy wynik w formacie {i: {r: f_ir}}
 final_f_ir = {i: {r: 0.0 for r in params.POPULATION} for i in params.NODE_TYPES}
-for (i, r), val in f_ir.items():
+for (i, r), val in f_ir_val.items():
     final_f_ir[i][r] = val
 
 # obliczamy średni błąd z zapisanych iteracji
