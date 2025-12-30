@@ -157,4 +157,4 @@ MIN_LAMBDA = 1e-12  # minimalna dopuszczalna wartość lambda
 RELAX_ALPHA = 0.4   # współczynnik relaksacji (0 < alpha <= 1)
 
 MAX_ITER = 1000    # maksymalna liczba iteracji
-EPS = 1e-6         # tolerancja zbieżności
+EPS = 1e-5         # tolerancja zbieżności

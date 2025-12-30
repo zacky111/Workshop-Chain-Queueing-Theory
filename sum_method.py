@@ -24,6 +24,7 @@ def f_ir(lambdas: Dict[int, float], e_ir: Dict[int, Dict[int, float]]):
     """
     I = len(params.NODE_TYPES)
     classes = sorted(lambdas.keys())
+    
     # init f_ir
     f = {i: {r: 0.0 for r in classes} for i in range(1, I + 1)}
 
@@ -109,7 +110,12 @@ def fix_ir(i,
 
         if  node_m_servers[i] == 1:
 
-            return (visit_ratios[r][i] / mu_i) * (1/(1 - (K-1) / K) * (lambda_ir / mu_i))
+            rho_ir=visit_ratios[r][i] / max(mu_i, MIN_S)
+            
+            rho_i = 0.0
+            for _ in range(r):
+                rho_i += visit_ratios[r][i] / max(mu_i, MIN_S)
+            return (rho_ir) * (1/ max(((1 - ((K-1) / K)) * rho_i, MIN_S)))
         
         else:
             raise ValueError(f"Nieobsługiwana ilość serwerów w węźle: {node_m_servers[i]}")
@@ -123,6 +129,39 @@ def fix_ir(i,
         raise ValueError(f"Nieobsługiwany typ węzła: {node_type}")
 
 
+def sum_method():
+    """
+    Metoda SUM do wyznaczania przepustowości klas λ_r oraz średniej liczby klientów klasy r w węźle i (K_ir).
+    Zwraca krotkę (lambdas, K_ir, err, err_mean), gdzie:
+      - lambdas to słownik r->λ_r
+      - K_ir to słownik r->{i: K_ir}
+      - err to błąd ostatniej iteracji
+      - err_mean to średni błąd po iteracjach
+    """
+    # końcowe lambdas
+    lambdas = {}
+    for r in params.POPULATION:
+        denom = sum(
+            params.VISIT_RATIOS[r][i] * final_f_ir[i][r]
+            for i in params.NODE_TYPES
+        )
+        lambdas[r] = params.POPULATION[r] / max(denom, params.MIN_S)
+
+    # końcowe K_ir
+    K_ir = {}
+    for r in params.POPULATION:
+        K_ir[r] = {}
+        for i in params.NODE_TYPES:
+            K_ir[r][i] = lambdas[r] * params.VISIT_RATIOS[r][i] * final_f_ir[i][r]
+
+    # błąd ostatniej iteracji (ostatni zapis w errs)
+    err = float(errs[-1]) if errs else 0.0
+
+    return lambdas, K_ir, err, err_mean
+
+
+
+# === GŁÓWNY ALGORYTM METODY SUM ===
 # inicjalizacja
 f_ir = {
     (i, r): 1.0
@@ -176,37 +215,16 @@ for (i, r), val in f_ir.items():
     final_f_ir[i][r] = val
 
 # obliczamy średni błąd z zapisanych iteracji
-err_mean = float(np.mean(errs)) if errs else 0.0
+if errs:
+    N = min(100, len(errs))  # weź ostatnie N iteracji (burn-in)
+    err_mean = float(np.mean(errs[-N:]))
+    err_median = float(np.median(errs))
+    err_max = float(np.max(errs))
+else:
+    err_mean = err_median = err_max = 0.0
 
-def sum_method():
-    """
-    Metoda SUM do wyznaczania przepustowości klas λ_r oraz średniej liczby klientów klasy r w węźle i (K_ir).
-    Zwraca krotkę (lambdas, K_ir, err, err_mean), gdzie:
-      - lambdas to słownik r->λ_r
-      - K_ir to słownik r->{i: K_ir}
-      - err to błąd ostatniej iteracji
-      - err_mean to średni błąd po iteracjach
-    """
-    # końcowe lambdas
-    lambdas = {}
-    for r in params.POPULATION:
-        denom = sum(
-            params.VISIT_RATIOS[r][i] * final_f_ir[i][r]
-            for i in params.NODE_TYPES
-        )
-        lambdas[r] = params.POPULATION[r] / max(denom, params.MIN_S)
 
-    # końcowe K_ir
-    K_ir = {}
-    for r in params.POPULATION:
-        K_ir[r] = {}
-        for i in params.NODE_TYPES:
-            K_ir[r][i] = lambdas[r] * params.VISIT_RATIOS[r][i] * final_f_ir[i][r]
 
-    # błąd ostatniej iteracji (ostatni zapis w errs)
-    err = float(errs[-1]) if errs else 0.0
-
-    return lambdas, K_ir, err, err_mean
 
 
 

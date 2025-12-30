@@ -6,7 +6,7 @@ from collections import defaultdict
 
 from nodes import FIFONode, ISNode
 from customer import Customer
-import params as P
+import src.params as P
 
 # event types: ('end_service', time, customer, node_id)
 # We'll store events as tuples (time, seq, event_type, payload...)
