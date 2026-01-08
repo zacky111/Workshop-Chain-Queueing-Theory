@@ -6,90 +6,103 @@ from scipy.optimize import nnls
 np.set_printoptions(precision=3, suppress=True)
 
 class SummationMethod:
-    def __init__(self) -> None:
-        # Liczba klas i węzłów
-        self.r = 4  # klasy: Uszkodzenia elektryczne, mechaniczne, mieszane, uproszczone
-        self.n = 8  # węzły
-        
+    def __init__(self, r=None, n=None, service_type=None, m=None, mi=None, p=None, K=None, epsilon=None, num_of_iterations=None) -> None:
+        # Domyślne wartości (tak jak wcześniej)
+        default_r = 4
+        default_n = 8
+
+        # Jeśli macierz mi/p została przekazana, odczytujemy r i n z niej
+        if mi is not None:
+            mi_arr = np.array(mi)
+            n_from_mi, r_from_mi = mi_arr.shape
+            self.mi = mi_arr
+            self.n = n_from_mi
+            self.r = r_from_mi
+        else:
+            self.r = r if r is not None else default_r
+            self.n = n if n is not None else default_n
+            # domyślna mi (tak jak wcześniej)
+            self.mi = np.array([
+                [3, 3, 3, 3],  # 1: Przyjmowanie zgłoszenia
+                [2, 2, 2, 2],  # 2: Dział elektryczny
+                [2, 2, 2, 2],  # 3: Dział mechaniczny
+                [1, 1, 1, 1],  # 4: Testy elektryczne
+                [1, 1, 1, 1],  # 5: Testy mechaniczne
+                [2, 2, 2, 2],  # 6: Wycena/dokumentacja
+                [1, 1, 1, 1],  # 7: Obsługa klienta
+                [1, 1, 1, 1]   # 8: Stała eksploatacja
+            ])
+
         # Typy węzłów: 1=FIFO, 3=IS
-        self.service_type = np.array([1, 1, 1, 3, 3, 1, 3, 3])
-        
+        self.service_type = np.array(service_type) if service_type is not None else np.array([1, 1, 1, 3, 3, 1, 3, 3])
+
         # Kanały obsługi w węzłach
-        self.m = np.array([1, 1, 1, 1, 1, 1, 1, 1])
-        
-        # Intensywność obsługi w węzłach dla każdej klasy r
-        # Średni czas obsługi --> 1/mi_ir
-        self.mi = np.array([
-            [3, 3, 3, 3],  # 1: Przyjmowanie zgłoszenia
-            [2, 2, 2, 2],  # 2: Dział elektryczny
-            [2, 2, 2, 2],  # 3: Dział mechaniczny
-            [1, 1, 1, 1],  # 4: Testy elektryczne
-            [1, 1, 1, 1],  # 5: Testy mechaniczne
-            [2, 2, 2, 2],  # 6: Wycena/dokumentacja
-            [1, 1, 1, 1],  # 7: Obsługa klienta
-            [1, 1, 1, 1]   # 8: Stała eksploatacja
-        ])
-        
-        self.p = np.array([
+        self.m = np.array(m) if m is not None else np.array([1, 1, 1, 1, 1, 1, 1, 1])
 
-        # Klasa 1: 1 → 2 → 4 → 6 → 7 → 8 → 1
-        [
-        [0, 1, 0, 0, 0, 0, 0, 0],  # 1 → 2
-        [0, 0, 0, 0.7, 0, 0.3, 0, 0],  # 2 → 4
-        [0, 0, 1, 0, 0, 0, 0, 0],  # 3 nieosiągalny → zostaje w 3
-        [0, 0, 0, 0, 0, 1, 0, 0],  # 4 → 6
-        [0, 0, 0, 0, 1, 0, 0, 0],  # 5 nieosiągalny → zostaje w 5
-        [0, 0, 0, 0, 0, 0, 0.7, 0.3], # 6 → 7 (0.7), 6 → 8 (0.3)
-        [0, 0, 0, 0, 0, 0, 0, 1],  # 7 → 8
-        [1, 0, 0, 0, 0, 0, 0, 0]   # 8 → 1
-        ],
+        # P macierze (r x n x n)
+        if p is not None:
+            self.p = np.array(p)
+        else:
+            # domyślne p (jak wcześniej)
+            self.p = np.array([
+                # Klasa 1: 1 → 2 → 4 → 6 → 7 → 8 → 1
+                [
+                [0, 1, 0, 0, 0, 0, 0, 0],  # 1 → 2
+                [0, 0, 0, 0.7, 0, 0.3, 0, 0],  # 2 → 4
+                [0, 0, 1, 0, 0, 0, 0, 0],  # 3 nieosiągalny → zostaje w 3
+                [0, 0, 0, 0, 0, 1, 0, 0],  # 4 → 6
+                [0, 0, 0, 0, 1, 0, 0, 0],  # 5 nieosiągalny → zostaje w 5
+                [0, 0, 0, 0, 0, 0, 0.7, 0.3], # 6 → 7 (0.7), 6 → 8 (0.3)
+                [0, 0, 0, 0, 0, 0, 0, 1],  # 7 → 8
+                [1, 0, 0, 0, 0, 0, 0, 0]   # 8 → 1
+                ],
 
-        # Klasa 2: 1 → 3 → 5 → 6 → 7 → 8 → 1
-        [
-        [0, 0, 1, 0, 0, 0, 0, 0],  # 1 → 3
-        [0, 1, 0, 0, 0, 0, 0, 0],  # 2 nieosiągalny → zostaje w 2
-        [0, 0, 0, 0, 0.7, 0.3, 0, 0],  # 3 → 5
-        [0, 0, 0, 1, 0, 0, 0, 0],  # 4 nieosiągalny → zostaje w 4
-        [0, 0, 0, 0, 0, 1, 0, 0],  # 5 → 6
-        [0, 0, 0, 0, 0, 0, 0.7, 0.3], # 6 → 7 (0.7), 6 → 8 (0.3)
-        [0, 0, 0, 0, 0, 0, 0, 1],  # 7 → 8
-        [1, 0, 0, 0, 0, 0, 0, 0]   # 8 → 1
-        ],
+                # Klasa 2: 1 → 3 → 5 → 6 → 7 → 8 → 1
+                [
+                [0, 0, 1, 0, 0, 0, 0, 0],  # 1 → 3
+                [0, 1, 0, 0, 0, 0, 0, 0],  # 2 nieosiągalny → zostaje w 2
+                [0, 0, 0, 0, 0.7, 0.3, 0, 0],  # 3 → 5
+                [0, 0, 0, 1, 0, 0, 0, 0],  # 4 nieosiągalny → zostaje w 4
+                [0, 0, 0, 0, 0, 1, 0, 0],  # 5 → 6
+                [0, 0, 0, 0, 0, 0, 0.7, 0.3], # 6 → 7 (0.7), 6 → 8 (0.3)
+                [0, 0, 0, 0, 0, 0, 0, 1],  # 7 → 8
+                [1, 0, 0, 0, 0, 0, 0, 0]   # 8 → 1
+                ],
 
-        # Klasa 3: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 1
-        [
-        [0, 1, 0, 0, 0, 0, 0, 0],  # 1 → 2
-        [0, 0, 1, 0, 0, 0, 0, 0],  # 2 → 3
-        [0, 0, 0, 1, 0, 0, 0, 0],  # 3 → 4
-        [0, 0, 0, 0, 1, 0, 0, 0],  # 4 → 5
-        [0, 0, 0, 0, 0, 1, 0, 0],  # 5 → 6
-        [0, 0, 0, 0, 0, 0, 0.7, 0.3], # 6 → 7 (0.7), 6 → 8 (0.3)
-        [0, 0, 0, 0, 0, 0, 0, 1],  # 7 → 8
-        [1, 0, 0, 0, 0, 0, 0, 0]   # 8 → 1
-        ],
+                # Klasa 3: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 1
+                [
+                [0, 1, 0, 0, 0, 0, 0, 0],  # 1 → 2
+                [0, 0, 1, 0, 0, 0, 0, 0],  # 2 → 3
+                [0, 0, 0, 1, 0, 0, 0, 0],  # 3 → 4
+                [0, 0, 0, 0, 1, 0, 0, 0],  # 4 → 5
+                [0, 0, 0, 0, 0, 1, 0, 0],  # 5 → 6
+                [0, 0, 0, 0, 0, 0, 0.7, 0.3], # 6 → 7 (0.7), 6 → 8 (0.3)
+                [0, 0, 0, 0, 0, 0, 0, 1],  # 7 → 8
+                [1, 0, 0, 0, 0, 0, 0, 0]   # 8 → 1
+                ],
 
-        # Klasa 4: 1 → 6 → 7 → 8 → 1 z rozgałęzieniem 6 → 7 / 8
-        [
-        [0, 0, 0, 0, 0, 1, 0, 0],  # 1 → 6
-        [0, 1, 0, 0, 0, 0, 0, 0],  # 2 nieosiągalny → zostaje w 2
-        [0, 0, 1, 0, 0, 0, 0, 0],  # 3 nieosiągalny → zostaje w 3
-        [0, 0, 0, 1, 0, 0, 0, 0],  # 4 nieosiągalny → zostaje w 4
-        [0, 0, 0, 0, 1, 0, 0, 0],  # 5 nieosiągalny → zostaje w 5
-        [0, 0, 0, 0, 0, 0, 0.7, 0.3], # 6 → 7 (0.7), 6 → 8 (0.3)
-        [0, 0, 0, 0, 0, 0, 0, 1],  # 7 → 8
-        [1, 0, 0, 0, 0, 0, 0, 0]   # 8 → 1
-        ]
+                # Klasa 4: 1 → 6 → 7 → 8 → 1 z rozgałęzieniem 6 → 7 / 8
+                [
+                [0, 0, 0, 0, 0, 1, 0, 0],  # 1 → 6
+                [0, 1, 0, 0, 0, 0, 0, 0],  # 2 nieosiągalny → zostaje w 2
+                [0, 0, 1, 0, 0, 0, 0, 0],  # 3 nieosiągalny → zostaje w 3
+                [0, 0, 0, 1, 0, 0, 0, 0],  # 4 nieosiągalny → zostaje w 4
+                [0, 0, 0, 0, 1, 0, 0, 0],  # 5 nieosiągalny → zostaje w 5
+                [0, 0, 0, 0, 0, 0, 0.7, 0.3], # 6 → 7 (0.7), 6 → 8 (0.3)
+                [0, 0, 0, 0, 0, 0, 0, 1],  # 7 → 8
+                [1, 0, 0, 0, 0, 0, 0, 0]   # 8 → 1
+                ]
 
-        ])
+                ])
         
         # Średnia liczba zgłoszeń dla klas
-        self.K = np.array([2, 4, 2, 3])
+        self.K = np.array(K) if K is not None else np.array([2, 4, 2, 3])
         
         # Parametry obliczeniowe SUM
-        self.epsilon = 1e-05
+        self.epsilon = epsilon if epsilon is not None else 1e-05
         self.e = np.zeros(shape=(self.n, self.r))  # średnia liczba wizyt
         self.lambdas = np.array([self.epsilon] * self.r)
-        self.num_of_iterations = 200
+        self.num_of_iterations = num_of_iterations if num_of_iterations is not None else 200
         self.T_ir = np.zeros(shape=(self.n, self.r))
         self.K_ir = np.zeros(shape=(self.n, self.r))
         
@@ -203,6 +216,52 @@ class SummationMethod:
                 else:
                     self.T_ir[i, r] = 0
 
+    # Nowe pomocnicze metody:
+    def to_dict(self):
+        return {
+            "r": int(self.r),
+            "n": int(self.n),
+            "service_type": self.service_type.tolist(),
+            "m": self.m.tolist(),
+            "mi": self.mi.tolist(),
+            "p": self.p.tolist() if hasattr(self, "p") else None,
+            "K": self.K.tolist(),
+            "epsilon": float(self.epsilon),
+            "num_of_iterations": int(self.num_of_iterations)
+        }
+
+    def set_params(self, params: dict):
+        # params może zawierać dowolne z kluczy: r,n,service_type,m,mi,p,K,epsilon,num_of_iterations
+        if "mi" in params:
+            mi_arr = np.array(params["mi"])
+            self.mi = mi_arr
+            self.n, self.r = mi_arr.shape
+        if "r" in params:
+            self.r = int(params["r"])
+        if "n" in params:
+            self.n = int(params["n"])
+        if "service_type" in params:
+            self.service_type = np.array(params["service_type"])
+        if "m" in params:
+            self.m = np.array(params["m"])
+        if "p" in params:
+            self.p = np.array(params["p"])
+        if "K" in params:
+            self.K = np.array(params["K"])
+        if "epsilon" in params:
+            self.epsilon = float(params["epsilon"])
+        if "num_of_iterations" in params:
+            self.num_of_iterations = int(params["num_of_iterations"])
+
+        # Zresetuj wewnętrzne wektory zgodnie z wymiarami
+        self.e = np.zeros(shape=(self.n, self.r))
+        self.lambdas = np.array([self.epsilon] * self.r)
+        self.T_ir = np.zeros(shape=(self.n, self.r))
+        self.K_ir = np.zeros(shape=(self.n, self.r))
+
+        # Przelicz e
+        self.calculate_E()
+
 # --- Uruchomienie ---
 if __name__ == '__main__':
     sm = SummationMethod()
@@ -211,6 +270,5 @@ if __name__ == '__main__':
     print("Lambdas (intensywnosc przeplywu kazdej z klas):\n", sm.lambdas,"\n")
     sm.calculate_K_ir()
     print("K_ir (srednia ilosc zgloszen klasy r w węźle i (w tym zgloszenia w obsludze i kolejce)):\n", sm.K_ir,"\n")
-    #print("K:\n", np.sum(sm.K_ir, axis=0),"\n")
     sm.calculate_T_ir()
     print("T_ir (sredni czas przebywania klasy r w węźle i):\n", sm.T_ir,"\n")
