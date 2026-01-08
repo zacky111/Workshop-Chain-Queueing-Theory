@@ -86,9 +86,9 @@ class SummationMethod:
         self.K = np.array([2, 4, 2, 3])
         
         # Parametry obliczeniowe SUM
-        self.epsajlon = 1e-05
+        self.epsilon = 1e-05
         self.e = np.zeros(shape=(self.n, self.r))  # średnia liczba wizyt
-        self.lambdas = np.array([self.epsajlon] * self.r)
+        self.lambdas = np.array([self.epsilon] * self.r)
         self.num_of_iterations = 200
         self.T_ir = np.zeros(shape=(self.n, self.r))
         self.K_ir = np.zeros(shape=(self.n, self.r))
@@ -147,7 +147,7 @@ class SummationMethod:
     def run_iteration_method_for_Lambda_r(self):
         current_error = None
         for i in range(self.num_of_iterations):
-            if current_error is not None and current_error <= self.epsajlon:
+            if current_error is not None and current_error <= self.epsilon:
                 print(f"terminate {i}")
                 break
             else:
