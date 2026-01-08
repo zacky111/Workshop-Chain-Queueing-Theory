@@ -21,13 +21,13 @@ class SummationMethod:
         # Średni czas obsługi --> 1/mi_ir
         self.mi = np.array([
             [3, 3, 3, 3],  # 1: Przyjmowanie zgłoszenia
-            [2, 2, 2, 2],  # 2: Dział elektryczny
-            [2, 2, 2, 2],  # 3: Dział mechaniczny
-            [1, 1, 1, 1],  # 4: Testy elektryczne
-            [1, 1, 1, 1],  # 5: Testy mechaniczne
+            [1, 1, 1, 1],  # 2: Dział elektryczny
+            [1, 1, 1, 1],  # 3: Dział mechaniczny
+            [2, 2, 2, 2],  # 4: Testy elektryczne
+            [2, 2, 2, 2],  # 5: Testy mechaniczne
             [2, 2, 2, 2],  # 6: Wycena/dokumentacja
-            [1, 1, 1, 1],  # 7: Obsługa klienta
-            [1, 1, 1, 1]   # 8: Stała eksploatacja
+            [3, 3, 3, 3],  # 7: Obsługa klienta
+            [3, 3, 3, 3]   # 8: Stała eksploatacja
         ])
         
         self.p = np.array([
@@ -214,3 +214,4 @@ if __name__ == '__main__':
     #print("K:\n", np.sum(sm.K_ir, axis=0),"\n")
     sm.calculate_T_ir()
     print("T_ir (sredni czas przebywania klasy r w węźle i):\n", sm.T_ir,"\n")
+
