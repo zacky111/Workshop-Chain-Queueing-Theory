@@ -15,7 +15,7 @@ class SummationMethod:
         self.service_type = np.array([1, 1, 1, 3, 3, 1, 3, 3])
         
         # Kanały obsługi w węzłach
-        self.m = np.array([1, 1, 1, 10, 1, 1, 1, 1])
+        self.m = np.array([10, 10, 1, 10, 1, 1, 1, 1])
         
         # Intensywność obsługi w węzłach dla każdej klasy r
         # Średni czas obsługi --> 1/mi_ir
@@ -86,7 +86,7 @@ class SummationMethod:
         self.K = np.array([2, 4, 2, 3])
         
         # Parametry obliczeniowe SUM
-        self.epsilon = 1e-06
+        self.epsilon = 1e-07
         self.e = np.zeros(shape=(self.n, self.r))  # średnia liczba wizyt
         self.lambdas = np.array([self.epsilon] * self.r)
         self.num_of_iterations = 200
