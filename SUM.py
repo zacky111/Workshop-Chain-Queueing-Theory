@@ -14,7 +14,8 @@ class SummationMethod:
         # Kanały obsługi w węzłach
         self.m = np.array([1, 1, 1, 1, 1, 1, 1, 1])
         
-        # Pojemność serwerów dla każdej klasy
+        # Intensywność obsługi w węzłach dla każdej klasy r
+        # Średni czas obsługi --> 1/mi_ir
         self.mi = np.array([
             [3, 3, 3, 3],  # 1: Przyjmowanie zgłoszenia
             [2, 2, 2, 2],  # 2: Dział elektryczny
@@ -92,7 +93,6 @@ class SummationMethod:
         # Obliczenie macierzy e
         self.calculate_E()
     
-    # --- Funkcje SUM pozostają niezmienione ---
     def calculate_Ro_ir(self, i, r):
         Ro_ir = 0
         if self.service_type[i] == 1: # Typ 1, (m_i >= 1)
@@ -203,11 +203,11 @@ class SummationMethod:
 # --- Uruchomienie ---
 if __name__ == '__main__':
     sm = SummationMethod()
-    print("Matrix e_ir:\n", sm.e)
+    print("Matrix e_ir (średnia liczba wizyt (visit ratios)):\n", sm.e,"\n")
     sm.run_iteration_method_for_Lambda_r()
-    print("Lambdas:\n", sm.lambdas)
+    print("Lambdas (intensywnosc przeplywu kazdej z klas):\n", sm.lambdas,"\n")
     sm.calculate_K_ir()
-    print("K_ir:\n", sm.K_ir)
-    print("K:\n", np.sum(sm.K_ir, axis=0))
+    print("K_ir (srednia ilosc zgloszen klasy r w węźle i (w tym zgloszenia w obsludze i kolejce)):\n", sm.K_ir,"\n")
+    print("K:\n", np.sum(sm.K_ir, axis=0),"\n")
     sm.calculate_T_ir()
-    print("T_ir:\n", sm.T_ir)
+    print("T_ir (sredni czas przebywania klasy r w węźle i):\n", sm.T_ir,"\n")
