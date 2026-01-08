@@ -15,18 +15,18 @@ class SummationMethod:
         self.service_type = np.array([1, 1, 1, 3, 3, 1, 3, 3])
         
         # Kanały obsługi w węzłach
-        self.m = np.array([1, 1, 1, 1, 1, 1, 1, 1])
+        self.m = np.array([1, 1, 1, 10, 1, 1, 1, 1])
         
         # Intensywność obsługi w węzłach dla każdej klasy r
         # Średni czas obsługi --> 1/mi_ir
         self.mi = np.array([
-            [3, 3, 3, 3],  # 1: Przyjmowanie zgłoszenia
-            [2, 2, 2, 2],  # 2: Dział elektryczny
-            [2, 2, 2, 2],  # 3: Dział mechaniczny
+            [2, 2, 2, 2],  # 1: Przyjmowanie zgłoszenia
+            [3, 3, 3, 3],  # 2: Dział elektryczny
+            [1, 1, 1, 1],  # 3: Dział mechaniczny
             [1, 1, 1, 1],  # 4: Testy elektryczne
             [1, 1, 1, 1],  # 5: Testy mechaniczne
             [2, 2, 2, 2],  # 6: Wycena/dokumentacja
-            [1, 1, 1, 1],  # 7: Obsługa klienta
+            [2, 2, 2, 2],  # 7: Obsługa klienta
             [1, 1, 1, 1]   # 8: Stała eksploatacja
         ])
         
@@ -36,9 +36,9 @@ class SummationMethod:
         [
         [0, 1, 0, 0, 0, 0, 0, 0],  # 1 → 2
         [0, 0, 0, 0.7, 0, 0.3, 0, 0],  # 2 → 4
-        [0, 0, 1, 0, 0, 0, 0, 0],  # 3 nieosiągalny → zostaje w 3
+        [0, 0, 0, 0, 0, 0, 0, 0],  # 3 nieosiągalny → zostaje w 3
         [0, 0, 0, 0, 0, 1, 0, 0],  # 4 → 6
-        [0, 0, 0, 0, 1, 0, 0, 0],  # 5 nieosiągalny → zostaje w 5
+        [0, 0, 0, 0, 0, 0, 0, 0],  # 5 nieosiągalny → zostaje w 5
         [0, 0, 0, 0, 0, 0, 0.7, 0.3], # 6 → 7 (0.7), 6 → 8 (0.3)
         [0, 0, 0, 0, 0, 0, 0, 1],  # 7 → 8
         [1, 0, 0, 0, 0, 0, 0, 0]   # 8 → 1
@@ -47,9 +47,9 @@ class SummationMethod:
         # Klasa 2: 1 → 3 → 5 → 6 → 7 → 8 → 1
         [
         [0, 0, 1, 0, 0, 0, 0, 0],  # 1 → 3
-        [0, 1, 0, 0, 0, 0, 0, 0],  # 2 nieosiągalny → zostaje w 2
+        [0, 0, 0, 0, 0, 0, 0, 0],  # 2 nieosiągalny → zostaje w 2
         [0, 0, 0, 0, 0.7, 0.3, 0, 0],  # 3 → 5
-        [0, 0, 0, 1, 0, 0, 0, 0],  # 4 nieosiągalny → zostaje w 4
+        [0, 0, 0, 0, 0, 0, 0, 0],  # 4 nieosiągalny → zostaje w 4
         [0, 0, 0, 0, 0, 1, 0, 0],  # 5 → 6
         [0, 0, 0, 0, 0, 0, 0.7, 0.3], # 6 → 7 (0.7), 6 → 8 (0.3)
         [0, 0, 0, 0, 0, 0, 0, 1],  # 7 → 8
@@ -71,10 +71,10 @@ class SummationMethod:
         # Klasa 4: 1 → 6 → 7 → 8 → 1 z rozgałęzieniem 6 → 7 / 8
         [
         [0, 0, 0, 0, 0, 1, 0, 0],  # 1 → 6
-        [0, 1, 0, 0, 0, 0, 0, 0],  # 2 nieosiągalny → zostaje w 2
-        [0, 0, 1, 0, 0, 0, 0, 0],  # 3 nieosiągalny → zostaje w 3
-        [0, 0, 0, 1, 0, 0, 0, 0],  # 4 nieosiągalny → zostaje w 4
-        [0, 0, 0, 0, 1, 0, 0, 0],  # 5 nieosiągalny → zostaje w 5
+        [0, 0, 0, 0, 0, 0, 0, 0],  # 2 nieosiągalny → zostaje w 2
+        [0, 0, 0, 0, 0, 0, 0, 0],  # 3 nieosiągalny → zostaje w 3
+        [0, 0, 0, 0, 0, 0, 0, 0],  # 4 nieosiągalny → zostaje w 4
+        [0, 0, 0, 0, 0, 0, 0, 0],  # 5 nieosiągalny → zostaje w 5
         [0, 0, 0, 0, 0, 0, 0.7, 0.3], # 6 → 7 (0.7), 6 → 8 (0.3)
         [0, 0, 0, 0, 0, 0, 0, 1],  # 7 → 8
         [1, 0, 0, 0, 0, 0, 0, 0]   # 8 → 1
@@ -86,7 +86,7 @@ class SummationMethod:
         self.K = np.array([2, 4, 2, 3])
         
         # Parametry obliczeniowe SUM
-        self.epsilon = 1e-05
+        self.epsilon = 1e-06
         self.e = np.zeros(shape=(self.n, self.r))  # średnia liczba wizyt
         self.lambdas = np.array([self.epsilon] * self.r)
         self.num_of_iterations = 200
@@ -211,6 +211,6 @@ if __name__ == '__main__':
     print("Lambdas (intensywnosc przeplywu kazdej z klas):\n", sm.lambdas,"\n")
     sm.calculate_K_ir()
     print("K_ir (srednia ilosc zgloszen klasy r w węźle i (w tym zgloszenia w obsludze i kolejce)):\n", sm.K_ir,"\n")
-    #print("K:\n", np.sum(sm.K_ir, axis=0),"\n")
+    print("K:\n", np.sum(sm.K_ir, axis=0),"\n")
     sm.calculate_T_ir()
     print("T_ir (sredni czas przebywania klasy r w węźle i):\n", sm.T_ir,"\n")
