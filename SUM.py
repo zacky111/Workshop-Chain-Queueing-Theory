@@ -2,6 +2,9 @@ import numpy as np
 import math
 from scipy.optimize import nnls
 
+# ustawienie formatu wypisywania (np. 3 miejsca po przecinku)
+np.set_printoptions(precision=3, suppress=True)
+
 class SummationMethod:
     def __init__(self) -> None:
         # Liczba klas i węzłów
