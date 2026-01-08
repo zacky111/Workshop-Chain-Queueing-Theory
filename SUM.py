@@ -211,6 +211,6 @@ if __name__ == '__main__':
     print("Lambdas (intensywnosc przeplywu kazdej z klas):\n", sm.lambdas,"\n")
     sm.calculate_K_ir()
     print("K_ir (srednia ilosc zgloszen klasy r w węźle i (w tym zgloszenia w obsludze i kolejce)):\n", sm.K_ir,"\n")
-    print("K:\n", np.sum(sm.K_ir, axis=0),"\n")
+    #print("K:\n", np.sum(sm.K_ir, axis=0),"\n")
     sm.calculate_T_ir()
     print("T_ir (sredni czas przebywania klasy r w węźle i):\n", sm.T_ir,"\n")
