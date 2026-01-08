@@ -214,3 +214,4 @@ if __name__ == '__main__':
     print("K:\n", np.sum(sm.K_ir, axis=0),"\n")
     sm.calculate_T_ir()
     print("T_ir (sredni czas przebywania klasy r w węźle i):\n", sm.T_ir,"\n")
+
