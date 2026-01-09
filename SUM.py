@@ -165,6 +165,7 @@ class SummationMethod:
     def run_iteration_method_for_Lambda_r(self):
         current_error = None
         iterations_run = 0
+        convergence_history = []
         for i in range(self.num_of_iterations):
             if current_error is not None and current_error <= self.epsilon:
                 iterations_run = i
@@ -173,8 +174,9 @@ class SummationMethod:
                 prev_lambdas_r = self.lambdas.copy()
                 self._calculate_Lambda_r()
                 current_error = self.calculate_Error(prev_lambdas_r, self.lambdas)
+                convergence_history.append(current_error)
                 iterations_run = i + 1
-        return iterations_run
+        return iterations_run, convergence_history
     
     def _calculate_Lambda_r(self):
         for r in range(self.r):
@@ -205,7 +207,11 @@ class SummationMethod:
                         K_matrix[i, r] = m_i * ro_ir + (ro_ir / (1 - ro_i * (K - m_i - 1) / (K - m_i))) * P_mi
                     else:
                         denom = 1 - ro_i * (K-1)/K
-                        K_matrix[i, r] = ro_ir / denom
+                        if denom <= 0:
+                            K_matrix[i, r] = ro_ir 
+                        else:
+                            K_matrix[i, r] = ro_ir / denom
+                        #K_matrix[i, r] = ro_ir / denom
                 else:
                     lambda_ir = self.lambdas[r] * self.e[i, r]
                     K_matrix[i, r] = lambda_ir / mi_ir

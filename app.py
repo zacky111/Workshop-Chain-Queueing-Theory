@@ -15,18 +15,18 @@ st.title("Summation Method - Zamknięta Sieć Kolejkowa BCMP")
 name_classes = [
     "Uszkodzenia elektryczne",
     "Uszkodzenia mechaniczne",
-    "Mieszane",
+    "Uszkodzenia Mieszane",
     "Uproszczone zlecenia"
   ]
 name_nodes = [
     "Przyjęcie zgłoszenia",
-    "Wstępna diagnoza",
-    "Szczegółowa diagnoza",
-    "Naprawa części elektrycznych",
-    "Naprawa części mechanicznych",
-    "Testy końcowe",
-    "Pakowanie",
-    "Wydanie naprawionego urządzenia"
+    "Dział elektryczny",
+    "Dział mechaniczny",
+    "Testy elektryczne - automatyczne",
+    "Testy mechaniczne - automatyczne",
+    "Wycena/dokumentacja",
+    "Obsługa klienta - wydanie urządzenia",
+    "Stała eksploatacja"
   ]
 
 # Inicjalizacja sesji
@@ -109,9 +109,9 @@ with tab0:
     
     with col1:
         st.write("""
-        **r** - liczba klas użytkowników
+        **R** - liczba klas użytkowników
         
-        **n** - liczba węzłów w sieci
+        **I** - liczba węzłów w sieci
         
         **K** - średnia liczba zgłoszeń klasy w systemie
         
@@ -141,8 +141,8 @@ with tab1:
     
     with col1:
         st.subheader("Podstawowe")
-        r = st.number_input("Liczba klas (r):", min_value=1, max_value=10, value=int(st.session_state.sm.r))
-        n = st.number_input("Liczba węzłów (n):", min_value=1, max_value=20, value=int(st.session_state.sm.n))
+        r = st.number_input("Liczba klas (R):", min_value=1, max_value=10, value=int(st.session_state.sm.r))
+        n = st.number_input("Liczba węzłów (I):", min_value=1, max_value=20, value=int(st.session_state.sm.n))
         epsilon = st.number_input("Epsilon (dokładność):", min_value=1e-10, max_value=1e-2, value=float(st.session_state.sm.epsilon), format="%.2e")
         num_iterations = st.number_input("Liczba iteracji:", min_value=10, max_value=1000, value=int(st.session_state.sm.num_of_iterations))
     
@@ -166,7 +166,7 @@ with tab1:
         with col:
             service_type_values[i] = st.selectbox(f"Węzeł {i+1}", options=[1, 3], index=0 if st.session_state.sm.service_type[i] == 1 else 1, key=f"service_{i}")
     
-    st.subheader("Intensywność obsługi (mi_ir)")
+    st.subheader("Intensywność obsługi (μ_ir)")
     
     # Inicjalizacja DataFramu
     mi_edited = pd.DataFrame(
@@ -266,40 +266,48 @@ with tab3:
     
     if st.button("Uruchom Summation Method", width='stretch', key="run_button"):
         with st.spinner("Obliczanie..."):
-            iterations = st.session_state.sm.run_iteration_method_for_Lambda_r()
+            iterations, convergence_history = st.session_state.sm.run_iteration_method_for_Lambda_r()
             st.session_state.sm.calculate_K_ir()
             st.session_state.sm.calculate_T_ir()
             st.session_state.results_calculated = True
+            st.session_state.convergence_history = convergence_history
         st.success(f"Obliczenia zakończone! Liczba iteracji: {iterations}")
     
     if st.session_state.results_calculated:
         st.subheader("Wyniki")
         
         # Wyniki tabelaryczne
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         
         with col1:
             st.write("**Lambdas (intensywność przepływu klas)**")
             lambda_df = pd.DataFrame(st.session_state.sm.lambdas, index=[f"Klasa {i+1}" for i in range(int(st.session_state.sm.r))], columns=["λ"])
             st.dataframe(lambda_df, width='stretch')
             
+            
+        
+        with col2:
             st.write("**Suma K_ir dla każdej klasy**")
             K_sum = np.sum(st.session_state.sm.K_ir, axis=0)
             K_sum_df = pd.DataFrame(K_sum, index=[f"Klasa {i+1}" for i in range(int(st.session_state.sm.r))], columns=["K"])
             st.dataframe(K_sum_df, width='stretch')
+
+        with col3:
+            st.write("**e_ir (średnia liczba wizyt)**")
+            e_df = pd.DataFrame(st.session_state.sm.e.round(3), columns=[f"Klasa {i+1}" for i in range(int(st.session_state.sm.r))], index=[f"Węzeł {i+1}" for i in range(int(st.session_state.sm.n))])
+            st.dataframe(e_df, width='stretch')
+
+        col1, col2 = st.columns(2)
+        
+        with col1: 
+            st.write("**K_ir (średnia liczba zgłoszeń w węźle)**")
+            K_ir_df = pd.DataFrame(st.session_state.sm.K_ir.round(3), columns=[f"Klasa {i+1}" for i in range(int(st.session_state.sm.r))], index=[f"Węzeł {i+1}" for i in range(int(st.session_state.sm.n))])
+            st.dataframe(K_ir_df, width='stretch')
         
         with col2:
-            st.write("**e_ir (średnia liczba wizyt)**")
-            e_df = pd.DataFrame(st.session_state.sm.e, columns=[f"Klasa {i+1}" for i in range(int(st.session_state.sm.r))], index=[f"Węzeł {i+1}" for i in range(int(st.session_state.sm.n))])
-            st.dataframe(e_df, width='stretch')
-        
-        st.write("**K_ir (średnia liczba zgłoszeń w węźle)**")
-        K_ir_df = pd.DataFrame(st.session_state.sm.K_ir, columns=[f"Klasa {i+1}" for i in range(int(st.session_state.sm.r))], index=[f"Węzeł {i+1}" for i in range(int(st.session_state.sm.n))])
-        st.dataframe(K_ir_df, width='stretch')
-        
-        st.write("**T_ir (średni czas przebywania w węźle)**")
-        T_ir_df = pd.DataFrame(st.session_state.sm.T_ir, columns=[f"Klasa {i+1}" for i in range(int(st.session_state.sm.r))], index=[f"Węzeł {i+1}" for i in range(int(st.session_state.sm.n))])
-        st.dataframe(T_ir_df, width='stretch')
+            st.write("**T_ir (średni czas przebywania w węźle)**")
+            T_ir_df = pd.DataFrame(st.session_state.sm.T_ir.round(3), columns=[f"Klasa {i+1}" for i in range(int(st.session_state.sm.r))], index=[f"Węzeł {i+1}" for i in range(int(st.session_state.sm.n))])
+            st.dataframe(T_ir_df, width='stretch')
         
         # Wizualizacje
         st.subheader("Wizualizacje")
@@ -311,36 +319,57 @@ with tab3:
                                y=st.session_state.sm.lambdas,
                                title="Lambdas (Intensywność przepływu)",
                                labels={"x": "Klasa", "y": "λ"})
-            st.plotly_chart(fig_lambda, width='stretch')
+            st.plotly_chart(fig_lambda, use_container_width=True)
         
         with col2:
             fig_K = px.bar(x=[f"Węzeł {i+1}" for i in range(int(st.session_state.sm.n))],
                           y=np.sum(st.session_state.sm.K_ir, axis=1),
                           title="Suma K_ir po węzłach",
                           labels={"x": "Węzeł", "y": "K"})
-            st.plotly_chart(fig_K, width='stretch')
+            st.plotly_chart(fig_K, use_container_width=True)
         
-        # Heatmapy
+        # Nowe wykresy
         col1, col2 = st.columns(2)
         
         with col1:
-            fig_K_ir = go.Figure(data=go.Heatmap(
-                z=st.session_state.sm.K_ir,
-                x=[f"Klasa {i+1}" for i in range(int(st.session_state.sm.r))],
-                y=[f"Węzeł {i+1}" for i in range(int(st.session_state.sm.n))],
-                colorscale="Blues"
-            ))
-            fig_K_ir.update_layout(title="Heatmapa K_ir")
-            st.plotly_chart(fig_K_ir, width='stretch')
-        
+            # Zbieżność metody
+            if hasattr(st.session_state, 'convergence_history') and st.session_state.convergence_history:
+                fig_convergence = go.Figure()
+                fig_convergence.add_trace(go.Scatter(
+                    y=st.session_state.convergence_history,
+                    mode='lines+markers',
+                    name='Błąd',
+                    line=dict(color='#1f77b4', width=2),
+                    marker=dict(size=6)
+                ))
+                fig_convergence.update_layout(
+                    title="Zbieżność metody (błąd względem iteracji) - skala liniowa",
+                    xaxis_title="Iteracja",
+                    yaxis_title="Błąd",
+                    hovermode='x unified'
+                )
+                st.plotly_chart(fig_convergence, use_container_width=True)
+
         with col2:
-            fig_T_ir = go.Figure(data=go.Heatmap(
-                z=st.session_state.sm.T_ir,
-                x=[f"Klasa {i+1}" for i in range(int(st.session_state.sm.r))],
-                y=[f"Węzeł {i+1}" for i in range(int(st.session_state.sm.n))],
-                colorscale="Reds"
-            ))
-            fig_T_ir.update_layout(title="Heatmapa T_ir")
-            st.plotly_chart(fig_T_ir, width='stretch')
+            # Zbieżność metody - skala log
+            if hasattr(st.session_state, 'convergence_history') and st.session_state.convergence_history:
+                fig_convergence = go.Figure()
+                fig_convergence.add_trace(go.Scatter(
+                    y=st.session_state.convergence_history,
+                    mode='lines+markers',
+                    name='Błąd',
+                    line=dict(color='#1f77b4', width=2),
+                    marker=dict(size=6)
+                ))
+                fig_convergence.update_layout(
+                    title="Zbieżność metody (błąd względem iteracji) - skala logarytmiczna",
+                    xaxis_title="Iteracja",
+                    yaxis_title="Błąd",
+                    hovermode='x unified',
+                    yaxis_type="log"
+                )
+                st.plotly_chart(fig_convergence, use_container_width=True)
+        
+            
     else:
         st.info("Wciśnij przycisk 'Uruchom' aby obliczyć wyniki")
