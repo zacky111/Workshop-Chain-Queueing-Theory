@@ -1,106 +1,125 @@
 import numpy as np
 import math
 from scipy.optimize import nnls
+import json
+import os
 
-# ustawienie formatu wypisywania (np. 3 miejsca po przecinku)
 np.set_printoptions(precision=3, suppress=True)
 
 class SummationMethod:
-    def __init__(self) -> None:
-        # Liczba klas i węzłów
-        self.r = 4  # klasy: Uszkodzenia elektryczne, mechaniczne, mieszane, uproszczone
-        self.n = 8  # węzły
+    def __init__(self, config_path: str = None) -> None:
+        if config_path and os.path.exists(config_path):
+            self.load_config(config_path)
+        else:
+            self._set_defaults()
         
-        # Typy węzłów: 1=FIFO, 3=IS
+        self.calculate_E()
+    
+    def _set_defaults(self):
+        self.r = 4
+        self.n = 8
         self.service_type = np.array([1, 1, 1, 3, 3, 1, 3, 3])
-        
-        # Kanały obsługi w węzłach
         self.m = np.array([10, 10, 1, 10, 1, 1, 1, 1])
-        
-        # Intensywność obsługi w węzłach dla każdej klasy r
-        # Średni czas obsługi --> 1/mi_ir
         self.mi = np.array([
-            [2, 2, 2, 2],  # 1: Przyjmowanie zgłoszenia
-            [3, 3, 3, 3],  # 2: Dział elektryczny
-            [1, 1, 1, 1],  # 3: Dział mechaniczny
-            [1, 1, 1, 1],  # 4: Testy elektryczne
-            [1, 1, 1, 1],  # 5: Testy mechaniczne
-            [2, 2, 2, 2],  # 6: Wycena/dokumentacja
-            [2, 2, 2, 2],  # 7: Obsługa klienta
-            [1, 1, 1, 1]   # 8: Stała eksploatacja
+            [2, 2, 2, 2],
+            [3, 3, 3, 3],
+            [1, 1, 1, 1],
+            [1, 1, 1, 1],
+            [1, 1, 1, 1],
+            [2, 2, 2, 2],
+            [2, 2, 2, 2],
+            [1, 1, 1, 1]
         ])
-        
         self.p = np.array([
-
-        # Klasa 1: 1 → 2 → 4 → 6 → 7 → 8 → 1
-        [
-        [0, 1, 0, 0, 0, 0, 0, 0],  # 1 → 2
-        [0, 0, 0, 0.7, 0, 0.3, 0, 0],  # 2 → 4
-        [0, 0, 0, 0, 0, 0, 0, 0],  # 3 nieosiągalny → zostaje w 3
-        [0, 0, 0, 0, 0, 1, 0, 0],  # 4 → 6
-        [0, 0, 0, 0, 0, 0, 0, 0],  # 5 nieosiągalny → zostaje w 5
-        [0, 0, 0, 0, 0, 0, 0.7, 0.3], # 6 → 7 (0.7), 6 → 8 (0.3)
-        [0, 0, 0, 0, 0, 0, 0, 1],  # 7 → 8
-        [1, 0, 0, 0, 0, 0, 0, 0]   # 8 → 1
-        ],
-
-        # Klasa 2: 1 → 3 → 5 → 6 → 7 → 8 → 1
-        [
-        [0, 0, 1, 0, 0, 0, 0, 0],  # 1 → 3
-        [0, 0, 0, 0, 0, 0, 0, 0],  # 2 nieosiągalny → zostaje w 2
-        [0, 0, 0, 0, 0.7, 0.3, 0, 0],  # 3 → 5
-        [0, 0, 0, 0, 0, 0, 0, 0],  # 4 nieosiągalny → zostaje w 4
-        [0, 0, 0, 0, 0, 1, 0, 0],  # 5 → 6
-        [0, 0, 0, 0, 0, 0, 0.7, 0.3], # 6 → 7 (0.7), 6 → 8 (0.3)
-        [0, 0, 0, 0, 0, 0, 0, 1],  # 7 → 8
-        [1, 0, 0, 0, 0, 0, 0, 0]   # 8 → 1
-        ],
-
-        # Klasa 3: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 1
-        [
-        [0, 1, 0, 0, 0, 0, 0, 0],  # 1 → 2
-        [0, 0, 1, 0, 0, 0, 0, 0],  # 2 → 3
-        [0, 0, 0, 1, 0, 0, 0, 0],  # 3 → 4
-        [0, 0, 0, 0, 1, 0, 0, 0],  # 4 → 5
-        [0, 0, 0, 0, 0, 1, 0, 0],  # 5 → 6
-        [0, 0, 0, 0, 0, 0, 0.7, 0.3], # 6 → 7 (0.7), 6 → 8 (0.3)
-        [0, 0, 0, 0, 0, 0, 0, 1],  # 7 → 8
-        [1, 0, 0, 0, 0, 0, 0, 0]   # 8 → 1
-        ],
-
-        # Klasa 4: 1 → 6 → 7 → 8 → 1 z rozgałęzieniem 6 → 7 / 8
-        [
-        [0, 0, 0, 0, 0, 1, 0, 0],  # 1 → 6
-        [0, 0, 0, 0, 0, 0, 0, 0],  # 2 nieosiągalny → zostaje w 2
-        [0, 0, 0, 0, 0, 0, 0, 0],  # 3 nieosiągalny → zostaje w 3
-        [0, 0, 0, 0, 0, 0, 0, 0],  # 4 nieosiągalny → zostaje w 4
-        [0, 0, 0, 0, 0, 0, 0, 0],  # 5 nieosiągalny → zostaje w 5
-        [0, 0, 0, 0, 0, 0, 0.7, 0.3], # 6 → 7 (0.7), 6 → 8 (0.3)
-        [0, 0, 0, 0, 0, 0, 0, 1],  # 7 → 8
-        [1, 0, 0, 0, 0, 0, 0, 0]   # 8 → 1
-        ]
-
+            [
+            [0, 1, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0.7, 0, 0.3, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0.7, 0.3],
+            [0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0]
+            ],
+            [
+            [0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0.7, 0.3, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0.7, 0.3],
+            [0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0]
+            ],
+            [
+            [0, 1, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0.7, 0.3],
+            [0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0]
+            ],
+            [
+            [0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0.7, 0.3],
+            [0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0]
+            ]
         ])
-        
-        # Średnia liczba zgłoszeń dla klas
         self.K = np.array([2, 4, 2, 3])
-        
-        # Parametry obliczeniowe SUM
         self.epsilon = 1e-07
-        self.e = np.zeros(shape=(self.n, self.r))  # średnia liczba wizyt
-        self.lambdas = np.array([self.epsilon] * self.r)
         self.num_of_iterations = 200
+        
+        self.e = np.zeros(shape=(self.n, self.r))
+        self.lambdas = np.array([self.epsilon] * self.r)
         self.T_ir = np.zeros(shape=(self.n, self.r))
         self.K_ir = np.zeros(shape=(self.n, self.r))
+    
+    def save_config(self, filepath: str):
+        config = {
+            'r': int(self.r),
+            'n': int(self.n),
+            'service_type': self.service_type.tolist(),
+            'm': self.m.tolist(),
+            'mi': self.mi.tolist(),
+            'p': self.p.tolist(),
+            'K': self.K.tolist(),
+            'epsilon': float(self.epsilon),
+            'num_of_iterations': int(self.num_of_iterations)
+        }
+        with open(filepath, 'w') as f:
+            json.dump(config, f, indent=2)
+    
+    def load_config(self, filepath: str):
+        with open(filepath, 'r') as f:
+            config = json.load(f)
         
-        # Obliczenie macierzy e
-        self.calculate_E()
+        self.r = config['r']
+        self.n = config['n']
+        self.service_type = np.array(config['service_type'])
+        self.m = np.array(config['m'])
+        self.mi = np.array(config['mi'])
+        self.p = np.array(config['p'])
+        self.K = np.array(config['K'])
+        self.epsilon = config['epsilon']
+        self.num_of_iterations = config['num_of_iterations']
+        
+        self.e = np.zeros(shape=(self.n, self.r))
+        self.lambdas = np.array([self.epsilon] * self.r)
+        self.T_ir = np.zeros(shape=(self.n, self.r))
+        self.K_ir = np.zeros(shape=(self.n, self.r))
     
     def calculate_Ro_ir(self, i, r):
         Ro_ir = 0
-        if self.service_type[i] == 1: # Typ 1, (m_i >= 1)
+        if self.service_type[i] == 1:
             Ro_ir = self.lambdas[r] * self.e[i, r] / (self.m[i] * self.mi[i, r])
-        else: # Typ 2, 3, 4
+        else:
             Ro_ir = self.lambdas[r] * self.e[i, r] / self.mi[i, r]
         return Ro_ir
 
@@ -110,7 +129,6 @@ class SummationMethod:
             b = np.array([1] + [0] * (self.n - 1))
             x, _ = nnls(A, b)
             self.e[:, r] = x
-            
     
     def calculate_Ro_i(self, i):
         Ro_i = 0
@@ -146,14 +164,17 @@ class SummationMethod:
     
     def run_iteration_method_for_Lambda_r(self):
         current_error = None
+        iterations_run = 0
         for i in range(self.num_of_iterations):
             if current_error is not None and current_error <= self.epsilon:
-                print(f"terminate {i}")
+                iterations_run = i
                 break
             else:
                 prev_lambdas_r = self.lambdas.copy()
                 self._calculate_Lambda_r()
                 current_error = self.calculate_Error(prev_lambdas_r, self.lambdas)
+                iterations_run = i + 1
+        return iterations_run
     
     def _calculate_Lambda_r(self):
         for r in range(self.r):
