@@ -205,10 +205,7 @@ class SummationMethod:
                         K_matrix[i, r] = m_i * ro_ir + (ro_ir / (1 - ro_i * (K - m_i - 1) / (K - m_i))) * P_mi
                     else:
                         denom = 1 - ro_i * (K-1)/K
-                        if denom <= 0:
-                            K_matrix[i, r] = ro_ir 
-                        else:
-                            K_matrix[i, r] = ro_ir / denom
+                        K_matrix[i, r] = ro_ir / denom
                 else:
                     lambda_ir = self.lambdas[r] * self.e[i, r]
                     K_matrix[i, r] = lambda_ir / mi_ir
@@ -235,4 +232,5 @@ if __name__ == '__main__':
     print("K:\n", np.sum(sm.K_ir, axis=0),"\n")
     sm.calculate_T_ir()
     print("T_ir (sredni czas przebywania klasy r w węźle i):\n", sm.T_ir,"\n")
+
 
