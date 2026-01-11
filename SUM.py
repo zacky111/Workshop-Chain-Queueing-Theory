@@ -82,6 +82,7 @@ class SummationMethod:
         self.lambdas = np.array([self.epsilon] * self.r)
         self.T_ir = np.zeros(shape=(self.n, self.r))
         self.K_ir = np.zeros(shape=(self.n, self.r))
+        self.a = 0.3
     
     def save_config(self, filepath: str):
         config = {
@@ -93,7 +94,8 @@ class SummationMethod:
             'p': self.p.tolist(),
             'K': self.K.tolist(),
             'epsilon': float(self.epsilon),
-            'num_of_iterations': int(self.num_of_iterations)
+            'num_of_iterations': int(self.num_of_iterations),
+            'a': float(self.a)
         }
         with open(filepath, 'w') as f:
             json.dump(config, f, indent=2)
@@ -111,6 +113,7 @@ class SummationMethod:
         self.K = np.array(config['K'])
         self.epsilon = config['epsilon']
         self.num_of_iterations = config['num_of_iterations']
+        self.a = config['a']
         
         self.e = np.zeros(shape=(self.n, self.r))
         self.lambdas = np.array([self.epsilon] * self.r)
@@ -179,17 +182,12 @@ class SummationMethod:
             iterations_run = i + 1
         return iterations_run, convergence_history"""
 
-    def run_iteration_method_for_Lambda_r(self, alpha: float = 1.0):
+    def run_iteration_method_for_Lambda_r(self):
         # jedna iteracja aktualizacji lambd
-        self._calculate_Lambda_r(alpha=alpha)
+        self._calculate_Lambda_r()
 
     
-    def _calculate_Lambda_r(self, alpha: float = 1.0):
-        """
-        Aktualizacja lambd z możliwością relaksacji.
-        alpha = 1.0 -> pełna aktualizacja (stara metoda)
-        alpha < 1.0 -> stopniowa aktualizacja lambd
-        """
+    def _calculate_Lambda_r(self):
         for r in range(self.r):
             sum_of_Fix_ir = 0
             for i in range(self.n):
@@ -201,7 +199,7 @@ class SummationMethod:
                 lambda_new = self.K[r] / sum_of_Fix_ir
             
             # relaksacja
-            self.lambdas[r] = (1 - alpha) * self.lambdas[r] + alpha * lambda_new
+            self.lambdas[r] = (1 - 0.3) * self.lambdas[r] + 0.3 * lambda_new
 
     
     def calculate_Error(self, prev_lambda_r, lambda_r):
@@ -245,7 +243,7 @@ class SummationMethod:
     def reset_lambdas(self):
         self.lambdas = np.array([self.epsilon] * self.r)
 
-    def run_SUM(self, alpha: float = 0.3):
+    def run_SUM(self):
         """
         Metoda SUM z relaksacją lambd, z zapisem błędu w każdej iteracji.
         """
@@ -259,7 +257,7 @@ class SummationMethod:
             lambdas_prev = self.lambdas.copy()
 
             # aktualizacja lambd z relaksacją
-            self.run_iteration_method_for_Lambda_r(alpha=alpha)
+            self.run_iteration_method_for_Lambda_r()
 
             # nowe K_ir
             K_ir_new = self.calculate_K_ir()
@@ -280,37 +278,17 @@ class SummationMethod:
 
 
     def normalize_K_ir(self, K_ir):
-        """
-        Punkt 2 metody SUM:
-        normalizacja K_ir tak, aby sum_i K_ir = K_r
-        """
         K_ir_new = K_ir.copy()
-
         for r in range(self.r):
             total = np.sum(K_ir[:, r])
-
             if total > 0:
                 K_ir_new[:, r] *= self.K[r] / total
             else:
-                # zabezpieczenie numeryczne
                 K_ir_new[:, r] = self.K[r] / self.n
-
         return K_ir_new
 
-
-# --- Uruchomienie --- --> correct lunch by app.py
-"""if __name__ == '__main__':
-    sm = SummationMethod(CONFIG_PATH if os.path.exists(CONFIG_PATH) else None)
-    print("Matrix e_ir (średnia liczba wizyt (visit ratios)):\n", sm.e,"\n")
-    sm.run_iteration_method_for_Lambda_r()
-    print("Lambdas (intensywnosc przeplywu kazdej z klas):\n", sm.lambdas,"\n")
-    sm.calculate_K_ir()
-    print("K_ir (srednia ilosc zgloszen klasy r w węźle i (w tym zgloszenia w obsludze i kolejce)):\n", sm.K_ir,"\n")
-    print("K:\n", np.sum(sm.K_ir, axis=0),"\n")
-    sm.calculate_T_ir()
-    print("T_ir (sredni czas przebywania klasy r w węźle i):\n", sm.T_ir,"\n")"""
-
-
+# ręczne testy
+# docelowo, metoda uruchamiana przez app.py (tab3)
 if __name__ == '__main__':
     sm = SummationMethod(CONFIG_PATH if os.path.exists(CONFIG_PATH) else None)
 

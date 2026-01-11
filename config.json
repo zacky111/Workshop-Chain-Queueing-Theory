@@ -408,5 +408,6 @@
     3
   ],
   "epsilon": 1e-07,
-  "num_of_iterations": 200
+  "num_of_iterations": 200,
+  "a": 0.3
 }

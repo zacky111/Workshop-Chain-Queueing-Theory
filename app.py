@@ -267,7 +267,7 @@ with tab3:
     if st.button("Uruchom Summation Method", width='stretch', key="run_button"):
         with st.spinner("Obliczanie..."):
             st.session_state.sm.reset_lambdas()
-            st.session_state.sm.run_SUM(alpha=0.3)  # pełne iteracje
+            st.session_state.sm.run_SUM()
             st.session_state.sm.calculate_K_ir()
             st.session_state.sm.calculate_T_ir()
             st.session_state.results_calculated = True
@@ -337,7 +337,8 @@ with tab3:
                     mode='lines+markers',
                     name='Błąd',
                     line=dict(color='#1f77b4', width=2),
-                    marker=dict(size=6)
+                    marker=dict(size=6),
+                    x=list(range(1, len(st.session_state.sm.convergence_history) + 1))
                 ))
                 fig_lin.update_layout(
                     title="Zbieżność metody - skala liniowa",
@@ -354,7 +355,8 @@ with tab3:
                     mode='lines+markers',
                     name='Błąd',
                     line=dict(color='#ff7f0e', width=2),
-                    marker=dict(size=6)
+                    marker=dict(size=6),
+                    x=list(range(1, len(st.session_state.sm.convergence_history) + 1))
                 ))
                 fig_log.update_layout(
                     title="Zbieżność metody - skala logarytmiczna",
