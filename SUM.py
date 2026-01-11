@@ -259,6 +259,8 @@ class SummationMethod:
                 print(f"SUM converged in {it+1} iterations")
                 break
 
+        return it+1
+
 
 
     def normalize_K_ir(self, K_ir):

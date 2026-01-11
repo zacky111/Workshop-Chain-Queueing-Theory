@@ -267,12 +267,11 @@ with tab3:
     if st.button("Uruchom Summation Method", width='stretch', key="run_button"):
         with st.spinner("Obliczanie..."):
             st.session_state.sm.reset_lambdas()
-            st.session_state.sm.run_SUM()
+            it=st.session_state.sm.run_SUM()
             st.session_state.sm.calculate_K_ir()
             st.session_state.sm.calculate_T_ir()
             st.session_state.results_calculated = True
-        st.success(f"Obliczenia zakończone!")
-    
+        st.success(f"Obliczenia zakończone! Ilość wykonanych iteracji: {it}")
     if st.session_state.results_calculated:
         st.subheader("Wyniki")
         
