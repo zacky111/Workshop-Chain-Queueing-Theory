@@ -5,6 +5,7 @@ import json
 import os
 
 np.set_printoptions(precision=3, suppress=True)
+CONFIG_PATH = "config.json"
 
 class SummationMethod:
     def __init__(self, config_path: str = None) -> None:
@@ -162,7 +163,7 @@ class SummationMethod:
         else:
             return e_ir / mi_ir
     
-    def run_iteration_method_for_Lambda_r(self):
+    """def run_iteration_method_for_Lambda_r(self, alpha: float = 1.0):
         current_error = None
         iterations_run = 0
         convergence_history = []
@@ -170,24 +171,37 @@ class SummationMethod:
             if current_error is not None and current_error <= self.epsilon:
                 iterations_run = i
                 break
-            else:
-                prev_lambdas_r = self.lambdas.copy()
-                self._calculate_Lambda_r()
-                current_error = self.calculate_Error(prev_lambdas_r, self.lambdas)
-                convergence_history.append(current_error)
-                iterations_run = i + 1
-        return iterations_run, convergence_history
+            prev_lambdas_r = self.lambdas.copy()
+            self._calculate_Lambda_r(alpha=alpha)  # użycie relaksacji
+            current_error = self.calculate_Error(prev_lambdas_r, self.lambdas)
+            convergence_history.append(current_error)
+            iterations_run = i + 1
+        return iterations_run, convergence_history"""
+
+    def run_iteration_method_for_Lambda_r(self, alpha: float = 1.0):
+        # jedna iteracja aktualizacji lambd
+        self._calculate_Lambda_r(alpha=alpha)
+
     
-    def _calculate_Lambda_r(self):
+    def _calculate_Lambda_r(self, alpha: float = 1.0):
+        """
+        Aktualizacja lambd z możliwością relaksacji.
+        alpha = 1.0 -> pełna aktualizacja (stara metoda)
+        alpha < 1.0 -> stopniowa aktualizacja lambd
+        """
         for r in range(self.r):
             sum_of_Fix_ir = 0
             for i in range(self.n):
                 Ro_i = self.calculate_Ro_i(i)
                 sum_of_Fix_ir += self.calcucate_Fix_ir(Ro_i, i, r)
             if sum_of_Fix_ir == 0:
-                self.lambdas[r] = 0
+                lambda_new = self.epsilon
             else:
-                self.lambdas[r] = self.K[r] / sum_of_Fix_ir
+                lambda_new = self.K[r] / sum_of_Fix_ir
+            
+            # relaksacja
+            self.lambdas[r] = (1 - alpha) * self.lambdas[r] + alpha * lambda_new
+
     
     def calculate_Error(self, prev_lambda_r, lambda_r):
         return np.sqrt(np.sum((prev_lambda_r - lambda_r) ** 2))
@@ -230,9 +244,56 @@ class SummationMethod:
     def reset_lambdas(self):
         self.lambdas = np.array([self.epsilon] * self.r)
 
-# --- Uruchomienie ---
-if __name__ == '__main__':
-    sm = SummationMethod()
+    def run_SUM(self, alpha: float = 0.3):
+        """
+        Metoda SUM z relaksacją lambd, bez szybkiego zbiegania.
+        """
+        self.K_ir = np.zeros((self.n, self.r))
+        for r in range(self.r):
+            self.K_ir[:, r] = self.K[r] / self.n
+
+        for it in range(self.num_of_iterations):
+            lambdas_prev = self.lambdas.copy()
+
+            # aktualizacja lambd z relaksacją
+            self.run_iteration_method_for_Lambda_r(alpha=alpha)
+
+            # nowe K_ir
+            K_ir_new = self.calculate_K_ir()
+            K_ir_new = self.normalize_K_ir(K_ir_new)
+
+            error_in_SUM = self.calculate_Error(lambdas_prev, self.lambdas)
+            print(f"Iter {it+1}, SUM error: {error_in_SUM:.6e}")
+
+            self.K_ir = K_ir_new
+
+            if error_in_SUM < self.epsilon:
+                print(f"SUM converged in {it+1} iterations")
+                break
+
+
+    def normalize_K_ir(self, K_ir):
+        """
+        Punkt 2 metody SUM:
+        normalizacja K_ir tak, aby sum_i K_ir = K_r
+        """
+        K_ir_new = K_ir.copy()
+
+        for r in range(self.r):
+            total = np.sum(K_ir[:, r])
+
+            if total > 0:
+                K_ir_new[:, r] *= self.K[r] / total
+            else:
+                # zabezpieczenie numeryczne
+                K_ir_new[:, r] = self.K[r] / self.n
+
+        return K_ir_new
+
+
+# --- Uruchomienie --- --> correct lunch by app.py
+"""if __name__ == '__main__':
+    sm = SummationMethod(CONFIG_PATH if os.path.exists(CONFIG_PATH) else None)
     print("Matrix e_ir (średnia liczba wizyt (visit ratios)):\n", sm.e,"\n")
     sm.run_iteration_method_for_Lambda_r()
     print("Lambdas (intensywnosc przeplywu kazdej z klas):\n", sm.lambdas,"\n")
@@ -240,4 +301,19 @@ if __name__ == '__main__':
     print("K_ir (srednia ilosc zgloszen klasy r w węźle i (w tym zgloszenia w obsludze i kolejce)):\n", sm.K_ir,"\n")
     print("K:\n", np.sum(sm.K_ir, axis=0),"\n")
     sm.calculate_T_ir()
-    print("T_ir (sredni czas przebywania klasy r w węźle i):\n", sm.T_ir,"\n")
+    print("T_ir (sredni czas przebywania klasy r w węźle i):\n", sm.T_ir,"\n")"""
+
+
+if __name__ == '__main__':
+    sm = SummationMethod(CONFIG_PATH if os.path.exists(CONFIG_PATH) else None)
+
+    print("Matrix e_ir:\n", sm.e, "\n")
+
+    sm.run_SUM()
+
+    print("Lambdas:\n", sm.lambdas, "\n")
+    print("K_ir:\n", sm.K_ir, "\n")
+    print("Sum K_ir (should equal K):\n", np.sum(sm.K_ir, axis=0), "\n")
+
+    sm.calculate_T_ir()
+    print("T_ir:\n", sm.T_ir, "\n")
