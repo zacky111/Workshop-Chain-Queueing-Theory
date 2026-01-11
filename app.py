@@ -323,6 +323,48 @@ with tab3:
                           title="Suma K_ir po węzłach",
                           labels={"x": "Węzeł", "y": "K"})
             st.plotly_chart(fig_K, use_container_width=True)
+
+            # Wizualizacje konwergencji
+        st.subheader("Zbieżność metody (błąd względem iteracji)")
+
+        if hasattr(st.session_state.sm, 'convergence_history') and st.session_state.sm.convergence_history:
+            col1, col2 = st.columns(2)
+
+            with col1:
+                fig_lin = go.Figure()
+                fig_lin.add_trace(go.Scatter(
+                    y=st.session_state.sm.convergence_history,
+                    mode='lines+markers',
+                    name='Błąd',
+                    line=dict(color='#1f77b4', width=2),
+                    marker=dict(size=6)
+                ))
+                fig_lin.update_layout(
+                    title="Zbieżność metody - skala liniowa",
+                    xaxis_title="Iteracja",
+                    yaxis_title="Błąd",
+                    hovermode='x unified'
+                )
+                st.plotly_chart(fig_lin, use_container_width=True)
+
+            with col2:
+                fig_log = go.Figure()
+                fig_log.add_trace(go.Scatter(
+                    y=st.session_state.sm.convergence_history,
+                    mode='lines+markers',
+                    name='Błąd',
+                    line=dict(color='#ff7f0e', width=2),
+                    marker=dict(size=6)
+                ))
+                fig_log.update_layout(
+                    title="Zbieżność metody - skala logarytmiczna",
+                    xaxis_title="Iteracja",
+                    yaxis_title="Błąd",
+                    hovermode='x unified',
+                    yaxis_type="log"
+                )
+                st.plotly_chart(fig_log, use_container_width=True)
+
         
     else:
         st.info("Wciśnij przycisk 'Uruchom' aby obliczyć wyniki")

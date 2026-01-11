@@ -15,6 +15,7 @@ class SummationMethod:
             self._set_defaults()
         
         self.calculate_E()
+        self.convergence_history = []
     
     def _set_defaults(self):
         self.r = 4
@@ -246,11 +247,13 @@ class SummationMethod:
 
     def run_SUM(self, alpha: float = 0.3):
         """
-        Metoda SUM z relaksacją lambd, bez szybkiego zbiegania.
+        Metoda SUM z relaksacją lambd, z zapisem błędu w każdej iteracji.
         """
         self.K_ir = np.zeros((self.n, self.r))
         for r in range(self.r):
             self.K_ir[:, r] = self.K[r] / self.n
+
+        self.convergence_history = []  # reset historii
 
         for it in range(self.num_of_iterations):
             lambdas_prev = self.lambdas.copy()
@@ -262,7 +265,10 @@ class SummationMethod:
             K_ir_new = self.calculate_K_ir()
             K_ir_new = self.normalize_K_ir(K_ir_new)
 
+            # błąd iteracji
             error_in_SUM = self.calculate_Error(lambdas_prev, self.lambdas)
+            self.convergence_history.append(error_in_SUM)
+
             print(f"Iter {it+1}, SUM error: {error_in_SUM:.6e}")
 
             self.K_ir = K_ir_new
@@ -270,6 +276,7 @@ class SummationMethod:
             if error_in_SUM < self.epsilon:
                 print(f"SUM converged in {it+1} iterations")
                 break
+
 
 
     def normalize_K_ir(self, K_ir):
