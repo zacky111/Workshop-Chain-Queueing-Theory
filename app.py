@@ -150,7 +150,7 @@ with tab1:
         st.subheader("Średnia liczba zgłoszeń (K)")
         K_values = st.session_state.sm.K.copy()
         for i in range(int(st.session_state.sm.r)):
-            K_values[i] = st.number_input(f"Klasa {i+1}:", min_value=0.1, max_value=100.0, value=float(st.session_state.sm.K[i]), key=f"K_{i}")
+            K_values[i] = st.number_input(f"Klasa {i+1}:", min_value=0, max_value=100, value=int(st.session_state.sm.K[i]), step=1, key=f"K_{i}")
     
     st.subheader("Kanały obsługi (m_i)")
     cols_m = st.columns(int(st.session_state.sm.n))
@@ -266,6 +266,7 @@ with tab3:
     
     if st.button("Uruchom Summation Method", width='stretch', key="run_button"):
         with st.spinner("Obliczanie..."):
+            st.session_state.sm.reset_lambdas()
             iterations, convergence_history = st.session_state.sm.run_iteration_method_for_Lambda_r()
             st.session_state.sm.calculate_K_ir()
             st.session_state.sm.calculate_T_ir()
