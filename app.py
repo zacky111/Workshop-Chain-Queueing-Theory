@@ -267,12 +267,11 @@ with tab3:
     if st.button("Uruchom Summation Method", width='stretch', key="run_button"):
         with st.spinner("Obliczanie..."):
             st.session_state.sm.reset_lambdas()
-            iterations, convergence_history = st.session_state.sm.run_iteration_method_for_Lambda_r()
+            st.session_state.sm.run_SUM(alpha=0.3)  # pełne iteracje
             st.session_state.sm.calculate_K_ir()
             st.session_state.sm.calculate_T_ir()
             st.session_state.results_calculated = True
-            st.session_state.convergence_history = convergence_history
-        st.success(f"Obliczenia zakończone! Liczba iteracji: {iterations}")
+        st.success(f"Obliczenia zakończone!")
     
     if st.session_state.results_calculated:
         st.subheader("Wyniki")
@@ -284,8 +283,6 @@ with tab3:
             st.write("**Lambdas (intensywność przepływu klas)**")
             lambda_df = pd.DataFrame(st.session_state.sm.lambdas, index=[f"Klasa {i+1}" for i in range(int(st.session_state.sm.r))], columns=["λ"])
             st.dataframe(lambda_df, width='stretch')
-            
-            
         
         with col2:
             st.write("**Suma K_ir dla każdej klasy**")
@@ -311,8 +308,6 @@ with tab3:
             st.dataframe(T_ir_df, width='stretch')
         
         # Wizualizacje
-        st.subheader("Wizualizacje")
-        
         col1, col2 = st.columns(2)
         
         with col1:
@@ -329,48 +324,5 @@ with tab3:
                           labels={"x": "Węzeł", "y": "K"})
             st.plotly_chart(fig_K, use_container_width=True)
         
-        # Nowe wykresy
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Zbieżność metody
-            if hasattr(st.session_state, 'convergence_history') and st.session_state.convergence_history:
-                fig_convergence = go.Figure()
-                fig_convergence.add_trace(go.Scatter(
-                    y=st.session_state.convergence_history,
-                    mode='lines+markers',
-                    name='Błąd',
-                    line=dict(color='#1f77b4', width=2),
-                    marker=dict(size=6)
-                ))
-                fig_convergence.update_layout(
-                    title="Zbieżność metody (błąd względem iteracji) - skala liniowa",
-                    xaxis_title="Iteracja",
-                    yaxis_title="Błąd",
-                    hovermode='x unified'
-                )
-                st.plotly_chart(fig_convergence, use_container_width=True)
-
-        with col2:
-            # Zbieżność metody - skala log
-            if hasattr(st.session_state, 'convergence_history') and st.session_state.convergence_history:
-                fig_convergence = go.Figure()
-                fig_convergence.add_trace(go.Scatter(
-                    y=st.session_state.convergence_history,
-                    mode='lines+markers',
-                    name='Błąd',
-                    line=dict(color='#1f77b4', width=2),
-                    marker=dict(size=6)
-                ))
-                fig_convergence.update_layout(
-                    title="Zbieżność metody (błąd względem iteracji) - skala logarytmiczna",
-                    xaxis_title="Iteracja",
-                    yaxis_title="Błąd",
-                    hovermode='x unified',
-                    yaxis_type="log"
-                )
-                st.plotly_chart(fig_convergence, use_container_width=True)
-        
-            
     else:
         st.info("Wciśnij przycisk 'Uruchom' aby obliczyć wyniki")
