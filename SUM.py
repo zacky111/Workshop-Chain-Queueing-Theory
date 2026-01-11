@@ -166,21 +166,6 @@ class SummationMethod:
                 return (e_ir / mi_ir) / (1 - ro_i * (K-1) / K)
         else:
             return e_ir / mi_ir
-    
-    """def run_iteration_method_for_Lambda_r(self, alpha: float = 1.0):
-        current_error = None
-        iterations_run = 0
-        convergence_history = []
-        for i in range(self.num_of_iterations):
-            if current_error is not None and current_error <= self.epsilon:
-                iterations_run = i
-                break
-            prev_lambdas_r = self.lambdas.copy()
-            self._calculate_Lambda_r(alpha=alpha)  # użycie relaksacji
-            current_error = self.calculate_Error(prev_lambdas_r, self.lambdas)
-            convergence_history.append(current_error)
-            iterations_run = i + 1
-        return iterations_run, convergence_history"""
 
     def run_iteration_method_for_Lambda_r(self):
         # jedna iteracja aktualizacji lambd
@@ -198,7 +183,6 @@ class SummationMethod:
             else:
                 lambda_new = self.K[r] / sum_of_Fix_ir
             
-            # relaksacja
             self.lambdas[r] = (1 - 0.3) * self.lambdas[r] + 0.3 * lambda_new
 
     
@@ -224,7 +208,7 @@ class SummationMethod:
                             K_matrix[i, r] = ro_ir 
                         else:
                             K_matrix[i, r] = ro_ir / denom
-                        #K_matrix[i, r] = ro_ir / denom
+                        
                 else:
                     lambda_ir = self.lambdas[r] * self.e[i, r]
                     K_matrix[i, r] = lambda_ir / mi_ir
@@ -245,7 +229,7 @@ class SummationMethod:
 
     def run_SUM(self):
         """
-        Metoda SUM z relaksacją lambd, z zapisem błędu w każdej iteracji.
+        Metoda SUM, z zapisem błędu w każdej iteracji.
         """
         self.K_ir = np.zeros((self.n, self.r))
         for r in range(self.r):
@@ -256,7 +240,7 @@ class SummationMethod:
         for it in range(self.num_of_iterations):
             lambdas_prev = self.lambdas.copy()
 
-            # aktualizacja lambd z relaksacją
+            # aktualizacja lambd
             self.run_iteration_method_for_Lambda_r()
 
             # nowe K_ir

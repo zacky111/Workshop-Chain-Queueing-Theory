@@ -324,7 +324,7 @@ with tab3:
                           labels={"x": "Węzeł", "y": "K"})
             st.plotly_chart(fig_K, use_container_width=True)
 
-            # Wizualizacje konwergencji
+        # Wizualizacje konwergencji
         st.subheader("Zbieżność metody (błąd względem iteracji)")
 
         if hasattr(st.session_state.sm, 'convergence_history') and st.session_state.sm.convergence_history:
