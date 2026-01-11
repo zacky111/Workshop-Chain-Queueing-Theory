@@ -266,9 +266,14 @@ with tab3:
     
     if st.button("Uruchom Summation Method", width='stretch', key="run_button"):
         with st.spinner("Obliczanie..."):
-            st.session_state.sm.reset_lambdas()
-            iterations, convergence_history = st.session_state.sm.run_iteration_method_for_Lambda_r()
-            st.session_state.sm.calculate_K_ir()
+            iterations, convergence_history = st.session_state.sm.run_SUM(alpha=0.1)
+            st.session_state.sm.calculate_T_ir()
+
+            st.session_state.results_calculated = True
+            st.session_state.convergence_history = convergence_history
+
+
+            st.session_state.sm.run_SUM()
             st.session_state.sm.calculate_T_ir()
             st.session_state.results_calculated = True
             st.session_state.convergence_history = convergence_history
