@@ -272,6 +272,27 @@ class SummationMethod:
             else:
                 K_ir_new[:, r] = self.K[r] / self.n
         return K_ir_new
+    
+    def check_parameters_ergodicity(self):
+        """
+        Sprawdza, czy parametry sieci pozwalają na ergodyczność węzłów FIFO (rho_i < 1).
+        Zwraca False jeśli choć jeden węzeł jest niestabilny.
+        """
+        ergodic = True
+        non_ergodic_nodes = []
+        
+        for i in range(self.n):
+            if self.service_type[i] == 1:  # tylko FIFO
+                mu_i_list = self.mi[i, :]
+                rho_i = sum(self.K[r] / self.n / mu_i_list[r] if self.m[i] > 0 else 0 for r in range(self.r))
+                # alternatywnie można użyć dokładniejszego wzoru:
+                # rho_i = sum(self.K[r] / self.m[i] / mu_i_list[r] for r in range(self.r))
+                if rho_i >= 1:
+                    ergodic = False
+                    non_ergodic_nodes.append((i, rho_i))
+        
+        return ergodic, non_ergodic_nodes
+
 
 # ręczne testy
 # docelowo, metoda uruchamiana przez app.py (tab3)
