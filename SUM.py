@@ -5,7 +5,6 @@ import json
 import os
 
 np.set_printoptions(precision=3, suppress=True)
-CONFIG_PATH = "config.json"
 
 class SummationMethod:
     def __init__(self, config_path: str = None) -> None:
@@ -15,7 +14,6 @@ class SummationMethod:
             self._set_defaults()
         
         self.calculate_E()
-        self.convergence_history = []
     
     def _set_defaults(self):
         self.r = 4
@@ -82,7 +80,6 @@ class SummationMethod:
         self.lambdas = np.array([self.epsilon] * self.r)
         self.T_ir = np.zeros(shape=(self.n, self.r))
         self.K_ir = np.zeros(shape=(self.n, self.r))
-        self.a = 0.3
     
     def save_config(self, filepath: str):
         config = {
@@ -94,8 +91,7 @@ class SummationMethod:
             'p': self.p.tolist(),
             'K': self.K.tolist(),
             'epsilon': float(self.epsilon),
-            'num_of_iterations': int(self.num_of_iterations),
-            'a': float(self.a)
+            'num_of_iterations': int(self.num_of_iterations)
         }
         with open(filepath, 'w') as f:
             json.dump(config, f, indent=2)
@@ -113,7 +109,6 @@ class SummationMethod:
         self.K = np.array(config['K'])
         self.epsilon = config['epsilon']
         self.num_of_iterations = config['num_of_iterations']
-        self.a = config['a']
         
         self.e = np.zeros(shape=(self.n, self.r))
         self.lambdas = np.array([self.epsilon] * self.r)
@@ -166,10 +161,46 @@ class SummationMethod:
                 return (e_ir / mi_ir) / (1 - ro_i * (K-1) / K)
         else:
             return e_ir / mi_ir
-
+    
     def run_iteration_method_for_Lambda_r(self):
-        # jedna iteracja aktualizacji lambd
-        self._calculate_Lambda_r()
+        current_error = None
+        iterations_run = 0
+        convergence_history = []
+
+        # --- ERGODICITY CHECK (initial) ---
+        ergodic, _ = self.check_ergodicity()
+        if not ergodic:
+            raise RuntimeError(
+                "System is NOT ergodic at start (rho_i >= 1)."
+            )
+
+        for i in range(self.num_of_iterations):
+            if current_error is not None and current_error <= self.epsilon:
+                iterations_run = i
+                break
+
+            prev_lambdas_r = self.lambdas.copy()
+
+            # --- update lambdas ---
+            self._calculate_Lambda_r()
+
+            # --- ERGODICITY CHECK (during iterations) ---
+            ergodic, _ = self.check_ergodicity(verbose=False)
+            if not ergodic:
+                print(
+                    f"WARNING: system lost ergodicity "
+                    f"at iteration {i+1}"
+                )
+                iterations_run = i + 1
+                break
+
+            current_error = self.calculate_Error(
+                prev_lambdas_r, self.lambdas
+            )
+            convergence_history.append(current_error)
+            iterations_run = i + 1
+
+        return iterations_run, convergence_history
 
     
     def _calculate_Lambda_r(self):
@@ -179,12 +210,9 @@ class SummationMethod:
                 Ro_i = self.calculate_Ro_i(i)
                 sum_of_Fix_ir += self.calcucate_Fix_ir(Ro_i, i, r)
             if sum_of_Fix_ir == 0:
-                lambda_new = self.epsilon
+                self.lambdas[r] = 0
             else:
-                lambda_new = self.K[r] / sum_of_Fix_ir
-            
-            self.lambdas[r] = (1 - 0.3) * self.lambdas[r] + 0.3 * lambda_new
-
+                self.lambdas[r] = self.K[r] / sum_of_Fix_ir
     
     def calculate_Error(self, prev_lambda_r, lambda_r):
         return np.sqrt(np.sum((prev_lambda_r - lambda_r) ** 2))
@@ -208,7 +236,7 @@ class SummationMethod:
                             K_matrix[i, r] = ro_ir 
                         else:
                             K_matrix[i, r] = ro_ir / denom
-                        
+                        #K_matrix[i, r] = ro_ir / denom
                 else:
                     lambda_ir = self.lambdas[r] * self.e[i, r]
                     K_matrix[i, r] = lambda_ir / mi_ir
@@ -223,68 +251,40 @@ class SummationMethod:
                     self.T_ir[i, r] = self.K_ir[i, r] / lambda_ir
                 else:
                     self.T_ir[i, r] = 0
-
-    def reset_lambdas(self):
-        self.lambdas = np.array([self.epsilon] * self.r)
-
-    def run_SUM(self):
+    def check_ergodicity(self, verbose: bool = True):
         """
-        Metoda SUM, z zapisem błędu w każdej iteracji.
+        Sprawdza warunek ergodyczności: rho_i < 1 dla wszystkich węzłów.
+        Zwraca (bool, dict)
         """
-        self.K_ir = np.zeros((self.n, self.r))
-        for r in range(self.r):
-            self.K_ir[:, r] = self.K[r] / self.n
+        ro_values = {}
+        ergodic = True
 
-        self.convergence_history = []  # reset historii
+        for i in range(self.n):
+            ro_i = self.calculate_Ro_i(i)
+            ro_values[i] = ro_i
 
-        for it in range(self.num_of_iterations):
-            lambdas_prev = self.lambdas.copy()
+            if ro_i >= 1:
+                ergodic = False
 
-            # aktualizacja lambd
-            self.run_iteration_method_for_Lambda_r()
+        if verbose:
+            print("\n=== Ergodicity check ===")
+            for i, ro_i in ro_values.items():
+                status = "OK" if ro_i < 1 else "NOT ERGODIC"
+                print(f"Node {i}: rho = {ro_i:.6f} -> {status}")
+            print("=======================\n")
 
-            # nowe K_ir
-            K_ir_new = self.calculate_K_ir()
-            K_ir_new = self.normalize_K_ir(K_ir_new)
+        return ergodic, ro_values
 
-            # błąd iteracji
-            error_in_SUM = self.calculate_Error(lambdas_prev, self.lambdas)
-            self.convergence_history.append(error_in_SUM)
-
-            print(f"Iter {it+1}, SUM error: {error_in_SUM:.6e}")
-
-            self.K_ir = K_ir_new
-
-            if error_in_SUM < self.epsilon:
-                print(f"SUM converged in {it+1} iterations")
-                break
-
-        return it+1
-
-
-
-    def normalize_K_ir(self, K_ir):
-        K_ir_new = K_ir.copy()
-        for r in range(self.r):
-            total = np.sum(K_ir[:, r])
-            if total > 0:
-                K_ir_new[:, r] *= self.K[r] / total
-            else:
-                K_ir_new[:, r] = self.K[r] / self.n
-        return K_ir_new
-
-# ręczne testy
-# docelowo, metoda uruchamiana przez app.py (tab3)
+# --- Uruchomienie ---
 if __name__ == '__main__':
-    sm = SummationMethod(CONFIG_PATH if os.path.exists(CONFIG_PATH) else None)
-
-    print("Matrix e_ir:\n", sm.e, "\n")
-
-    sm.run_SUM()
-
-    print("Lambdas:\n", sm.lambdas, "\n")
-    print("K_ir:\n", sm.K_ir, "\n")
-    print("Sum K_ir (should equal K):\n", np.sum(sm.K_ir, axis=0), "\n")
-
+    sm = SummationMethod()
+    print("Matrix e_ir (średnia liczba wizyt (visit ratios)):\n", sm.e,"\n")
+    sm.run_iteration_method_for_Lambda_r()
+    print("Lambdas (intensywnosc przeplywu kazdej z klas):\n", sm.lambdas,"\n")
+    sm.calculate_K_ir()
+    print("K_ir (srednia ilosc zgloszen klasy r w węźle i (w tym zgloszenia w obsludze i kolejce)):\n", sm.K_ir,"\n")
+    print("K:\n", np.sum(sm.K_ir, axis=0),"\n")
     sm.calculate_T_ir()
-    print("T_ir:\n", sm.T_ir, "\n")
+    print("T_ir (sredni czas przebywania klasy r w węźle i):\n", sm.T_ir,"\n")
+
+
